@@ -1,0 +1,22 @@
+Operator,OperatorString,Usage,Description
++,\+,a+b,Addition
+*,\*,a*b,Multiplication
+-,-,A-b,Subtraction
+/,/,a/b,Division
+^,\^,a^b,Power / exponent
+",",",",,For use within other functions
+ifelse,ifelse,"ifelse(a>b, 1, 0)","ifelse(condition, if true, if false)"
+==,==,a == b,Equality comparison. Returns 1/0 for true/false which means 5 + (1==1) will return 6.
+>,>,a>b,Greater than
+<,<,a<b,Less than
+>=,>=,a>=b,Greater than equal to
+<=,<=,a<=b,Less than equal to
+log,log,"log(a)","Default base is e. To change base to b, do log(a,b)."
+(,\(,,For use within other functions or BODMAS
+),\),,For use within other functions or BODMAS
+sin,sin,sin(3.14),Trigonometric sin in radians
+cos,cos,cos(3.14),Trigonometric cos in radians
+tan,tan,tan(3.14),Trigonometric tan in radians
+asin,asin,asin(1),Trigonometric sin inverse in radians
+acos,acos,acos(1),Trigonometric cos inverse in radians
+atan,atan,atan(1),Trigonometric tan inverse in radians
