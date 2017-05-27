@@ -1,22 +1,22 @@
 An R-Shiny app to run quick Monte Carlo simulations -
 
 A blank input variable -
-![Adding a variable](/Screenshots/010 Add Variable.png?raw=true)
+![Adding a variable](/Screenshots/010_Add_Variable.png?raw=true)
 
 Adding empirical distributions -
-![Adding empirical distributions](/Screenshots/020 Empirical Distributions.png?raw=true)
+![Adding empirical distributions](/Screenshots/020_Empirical_Distributions.png?raw=true)
 
 A very simple run -
-![Simple run](/Screenshots/030 Simple Run.png?raw=true)
+![Simple run](/Screenshots/030_Simple_Run.png?raw=true)
 
 Result summary of the simple run - 
-![Summary](/Screenshots/040 Summary.png?raw=true)
+![Summary](/Screenshots/040_Summary.png?raw=true)
 
 Another input variable - 
-![Simple input variable](/Screenshots/050 Input Variable Simple.png?raw=true)
+![Simple input variable](/Screenshots/050_Input_Variable_Simple.png?raw=true)
 
 An output variable -
-![Output variable examples](/Screenshots/060 Output Variables.png?raw=true)
+![Output variable examples](/Screenshots/060_Output_Variables.png?raw=true)
 
 
 ### Getting Started
