@@ -41,7 +41,8 @@ dtAllowedOperations = fread(
    paste0(
       lArchitectureParms$cRootDirectory,
       '/MonteCarloTool/Metadata/Operations.csv'
-   )
+   ),
+   sep = ';'
 )
 # sorting it in order of longer operators to shorter operators to
 # avoid mix ups with the string parsing

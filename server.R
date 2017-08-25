@@ -67,6 +67,7 @@ function(input, output, session) {
             lVariablesMetadata,
             function ( lVariableMetadata ) {
                data.table(
+                  VariableNumber = lVariableMetadata$iVariableNumber,
                   VariableBackEndName = paste0('Variable',lVariableMetadata$iVariableNumber),
                   VariableName = lVariableMetadata$cVariableName
                )
@@ -517,7 +518,7 @@ function(input, output, session) {
             Operator = 'q'
          )[0]
 
-         for ( cPattern in dtAllowedOperations[, c(' ', OperatorString)] ) {
+         for ( cPattern in dtAllowedOperations[, c(' ', ',', OperatorString)] ) {
 
             vcInvalidVariableNames = grep(
                x = vcVariableNames, 
@@ -632,7 +633,7 @@ function(input, output, session) {
 
             }
 
-            for ( cPattern in dtAllowedOperations[, c(' ', OperatorString)] ) {
+            for ( cPattern in dtAllowedOperations[, c(' ', ',', OperatorString)] ) {
 
                cEquation = unlist(strsplit(
                   x = as.character(cEquation),
@@ -876,7 +877,8 @@ function(input, output, session) {
    #' @param lVariablesMetadata Uhm... the list of variables and all the metadata
    fEvaluateVariables = function(
       iIterations,
-      lVariablesMetadata
+      lVariablesMetadata,
+      dtAllowedOperations
    ) {
 
       #' @todo The utility of some variables is not beyond certain other variables
@@ -911,6 +913,8 @@ function(input, output, session) {
 
       tryCatch(
          {
+
+            vcVariablesWhichAreConstant = c()
 
             for ( iVariableNumber in vcEvaluationOrder ) {
 
@@ -977,19 +981,54 @@ function(input, output, session) {
 
                   cEquation = lVariableMetadata$cEquation
 
+                  bNeedsLoop = F
+
                   # Get all the variable names replaced with backend names
                   # To avoid some smart alec doing things like system('rm -rf')
                   for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
+                     cOriginalEquation = cEquation
                      cEquation = gsub(
                         x = cEquation,
                         pattern = dtVariableNameMapping[iRow, VariableName],
-                        replacement = dtVariableNameMapping[iRow, VariableBackEndName]
+                        replacement = dtVariableNameMapping[iRow, paste0(VariableBackEndName,'[iIndex]')]
                      )
+
+                     if ( cOriginalEquation != cEquation ) {
+
+                        if ( !dtVariableNameMapping[iRow, VariableNumber] %in% vcVariablesWhichAreConstant ) {
+
+                           bNeedsLoop = T
+
+                        }
+
+                     }
 
                   }
 
-                  vnDistribution = eval(parse(text = cEquation))
+                  # @todo Should ensure that no function ever has an overlap with any of the variable names
+                  # otherwise some equations will be unnecessarily be looped and not vectorised
+
+                  bNeedsLoop = grepl(
+                     x = cEquation, 
+                     pattern = dtAllowedOperations[Vectorised == T, paste(OperatorString, collapse = '|')]
+                  ) & bNeedsLoop
+
+                  if ( bNeedsLoop ) {
+
+                     vnDistribution = sapply(
+                        1:iIterations,
+                        function(iIndex) {
+                            eval(parse(text = cEquation))
+                        }
+                     )
+
+                  } else {
+
+                     iIndex = 1:iIterations
+                     vnDistribution = eval(parse(text = cEquation))
+
+                  }
 
                }
 
@@ -1031,6 +1070,18 @@ function(input, output, session) {
                )
 
                lReactiveValues[[paste0('dtVariableSummary',iVariableNumber)]] = dtVariableSummary
+
+               if ( 
+                  dtVariableSummary[Statistic == 'Worst (min)', Value] == dtVariableSummary[Statistic == 'Worst (max)', Value]
+               ) {
+
+                  vcVariablesWhichAreConstant = c(
+                     vcVariablesWhichAreConstant,
+                     lVariableMetadata$iVariableNumber
+                  )
+
+               }
+
                
             }
 
@@ -1428,7 +1479,8 @@ function(input, output, session) {
       # Evaluation
       lReactiveValuesPlaceholder = fEvaluateVariables(
          iIterations = input$Iterations,
-         lVariablesMetadata
+         lVariablesMetadata,
+         dtAllowedOperations
       )
 
       if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
@@ -2020,7 +2072,8 @@ function(input, output, session) {
          # Evaluating the scenario
          lReactiveValuesPlaceholder = fEvaluateVariables(
             iIterations = input$Iterations,
-            lVariablesMetadata
+            lVariablesMetadata,
+            dtAllowedOperations
          )
 
          if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
