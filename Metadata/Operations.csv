@@ -1,23 +1,23 @@
-Operator;OperatorString;Usage;Description;Vectorised;DefaultArguments
-+;\+;a+b;Addition;F;
-*;\*;a*b;Multiplication;F;
--;-;A-b;Subtraction;F;
-/;/;a/b;Division;F;
-^;\^;a^b;Power / exponent;F;
-";";";";;For use within other functions;F;
-ifelse;ifelse;"ifelse(a>b; 1; 0)";"ifelse(condition; if true; if false)";F;
-==;==;a == b;Equality comparison. Returns 1/0 for true/false which means 5 + (1==1) will return 6.;F;
->;>;a>b;Greater than;F;
-<;<;a<b;Less than;F;
->=;>=;a>=b;Greater than equal to;F;
-<=;<=;a<=b;Less than equal to;F;
-log;log;"log(a)";"Default base is e. To change base to b; do log(a;b).";F;
-(;\(;;For use within other functions or BODMAS;F;
-);\);;For use within other functions or BODMAS;F;
-sin;sin;sin(3.14);Trigonometric sin in radians;F;
-cos;cos;cos(3.14);Trigonometric cos in radians;F;
-tan;tan;tan(3.14);Trigonometric tan in radians;F;
-asin;asin;asin(1);Trigonometric sin inverse in radians;F;
-acos;acos;acos(1);Trigonometric cos inverse in radians;F;
-atan;atan;atan(1);Trigonometric tan inverse in radians;F;
-rnorm;rnorm;rnorm(n, mean, sd);n normally distributed values based on mean and sd;T;
+Operator;OperatorString;Usage;Description;Vectorised;MandatoryArguments;DefaultArguments
++;\+;a+b;Addition;F;;
+*;\*;a*b;Multiplication;F;;
+-;-;A-b;Subtraction;F;;
+/;/;a/b;Division;F;;
+^;\^;a^b;Power / exponent;F;;
+";";";";;For use within other functions;F;;
+ifelse;ifelse;"ifelse(a>b; 1; 0)";"ifelse(condition; if true; if false)";F;;
+==;==;a == b;Equality comparison. Returns 1/0 for true/false which means 5 + (1==1) will return 6.;F;;
+>;>;a>b;Greater than;F;;
+<;<;a<b;Less than;F;;
+>=;>=;a>=b;Greater than equal to;F;;
+<=;<=;a<=b;Less than equal to;F;;
+log;log;"log(a)";"Default base is e. To change base to b; do log(a;b).";F;;
+(;\(;;For use within other functions or BODMAS;F;;
+);\);;For use within other functions or BODMAS;F;;
+sin;sin;sin(3.14);Trigonometric sin in radians;F;;
+cos;cos;cos(3.14);Trigonometric cos in radians;F;;
+tan;tan;tan(3.14);Trigonometric tan in radians;F;;
+asin;asin;asin(1);Trigonometric sin inverse in radians;F;;
+acos;acos;acos(1);Trigonometric cos inverse in radians;F;;
+atan;atan;atan(1);Trigonometric tan inverse in radians;F;;
+rnorm;rnorm;rnorm(mean, sd);;T;mean,sd;n=iIterations

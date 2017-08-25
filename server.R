@@ -633,15 +633,125 @@ function(input, output, session) {
 
             }
 
-            for ( cPattern in dtAllowedOperations[, c(' ', ',', OperatorString)] ) {
+            for ( cPattern in c(' ', ',') ) {
 
                cEquation = unlist(strsplit(
                   x = as.character(cEquation),
                   split = cPattern
                ))
-               
+
             }
 
+            cEquation = paste(
+               cEquation,
+               collapse = ''
+            )
+
+            for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
+
+               cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
+
+               if ( !cOperatorString %in% c('(',')') ) {
+
+                  cMandatoryArguments = dtAllowedOperations[iOperatorNumber, MandatoryArguments]
+
+                  if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
+
+                     cEquation = gsub(
+                        x = cEquation,
+                        pattern = cOperatorString,
+                        replacement = ''
+                     )
+
+                  }
+
+                  gregexprOperationsMatches = gregexpr(
+                     pattern = paste0(
+                        cOperatorString, 
+                        '\\(.*?\\)'
+                     ), 
+                     text = cEquation
+                  )
+
+                  if ( gregexprOperationsMatches[[1]][1] != -1 ) {
+
+                     vcOperationsInThisEquation = regmatches(
+                        x = cEquation,
+                        m = gregexprOperationsMatches, 
+                     )
+
+                     vcNotOperationsInThisEquation = regmatches(
+                        x = cEquation,
+                        m = gregexprOperationsMatches, 
+                        invert = T
+                     )
+
+                     cMandatoryArguments = gsub(
+                        cMandatoryArguments,
+                        pattern = ' ',
+                        replacement = ''
+                     )
+
+                     vcArgumentsInThisFunction = unlist(strsplit(cMandatoryArguments, ','))
+
+                     for ( cMandatoryArgument in vcArgumentsInThisFunction ) {
+         
+                        vcOriginalOperationsInThisEquation = vcOperationsInThisEquation
+                           
+                        vcOperationsInThisEquation = gsub(
+                           x = vcOperationsInThisEquation,
+                           pattern = paste0(cMandatoryArgument,'='),
+                           replacement = ''
+                        )
+                        
+                        if ( all(vcOriginalOperationsInThisEquation == vcOperationsInThisEquation) ) {
+                        
+                           cReturn = paste(cReturn, ' ', cOperatorString, 'must explicitly specify', cMandatoryArguments)
+                           
+                        }
+
+                     }
+
+                     vcOperationsInThisEquation = gsub(
+                        x = vcOperationsInThisEquation,
+                        pattern = cOperatorString,
+                        replacement = ''
+                     )
+                     
+                     cEquation = c()
+
+                     if ( gregexprOperationsMatches[[1]][1] == 1 ) {
+
+                        cEquation[seq(length(vcOperationsInThisEquation))-2] = vcOperationsInThisEquation
+                        cEquation[seq(length(vcOperationsInThisEquation))-1] = vcNotOperationsInThisEquation
+
+                     } else {
+
+                        cEquation[seq(length(vcOperationsInThisEquation))-1] = vcOperationsInThisEquation
+                        cEquation[seq(length(vcOperationsInThisEquation))-2] = vcNotOperationsInThisEquation
+
+                     }
+
+                     cEquation = paste(
+                        cEquation,
+                        collapse = ''
+                     )
+        
+                  }  
+
+               }
+
+            }
+
+            cEquation = strsplit(
+               cEquation,
+               '\\)'
+            )
+
+            cEquation = strsplit(
+               unlist(cEquation),
+               '\\('
+            )
 
             if ( length(cEquation) > 0) {
                if ( any(nchar(cEquation) > 0) ) {
@@ -653,7 +763,8 @@ function(input, output, session) {
                         paste(
                            cEquation,
                            collapse = ', '
-                        )
+                        ),
+                        cReturn
                      )
 
                   }
@@ -685,6 +796,7 @@ function(input, output, session) {
          return ( lMainNotification )
 
       }
+
 
       # Check for missing equations
       vcNotification = sapply(
@@ -804,6 +916,7 @@ function(input, output, session) {
          )
 
          names(lVariablesMetadata2) = names(lVariablesMetadata3)
+
          if ( 
             identical(lVariablesMetadata3, lVariablesMetadata2)
          ) {
@@ -1013,6 +1126,44 @@ function(input, output, session) {
                      x = cEquation, 
                      pattern = dtAllowedOperations[Vectorised == T, paste(OperatorString, collapse = '|')]
                   ) & bNeedsLoop
+
+                  # Adding default arguments
+
+                  print(cEquation)
+
+                  for ( iAddDefaultArgumentsFor in dtAllowedOperations[, which(is.na(DefaultArguments) | DefaultArguments != '' )] ) {
+
+                     print(iAddDefaultArgumentsFor)
+                     print(dtAllowedOperations[iAddDefaultArgumentsFor])
+                     print(paste0(
+                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
+                           '('
+                        ))
+                     print(paste0(
+                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
+                           '(', 
+                           dtAllowedOperations[iAddDefaultArgumentsFor, DefaultArguments],
+                           ','
+                        ))
+
+                     cEquation = gsub(
+                        x = cEquation,
+                        pattern = paste0(
+                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
+                           '\\('
+                        ),
+                        replacement = paste0(
+                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
+                           '(', 
+                           dtAllowedOperations[iAddDefaultArgumentsFor, DefaultArguments],
+                           ','
+                        )
+                     )
+
+                     print(cEquation)
+
+                  }
+
 
                   if ( bNeedsLoop ) {
 
@@ -1879,10 +2030,41 @@ function(input, output, session) {
       },
       content = function( file ) {
 
-         writeLines(
-            toJSON(lReactiveValues$lVariablesMetadata),
-            file
+         lVariablesMetadata = lReactiveValues$lVariablesMetadata
+
+         write(
+            "[",
+            file = file
          )
+
+         for ( y in seq(length(lVariablesMetadata)) ) {
+
+            write(
+               gsub(
+                  toJSON(lVariablesMetadata[[y]]), 
+                  pattern = ',', 
+                  replacement = ',\n\t'
+               ),
+               file = file,
+               append = T
+            )
+            
+            if ( y != length(lVariablesMetadata) ) {
+               write(
+                  ',',
+                  file = file,
+                  append = T
+               )  
+            }
+            
+         }
+
+         write(
+            "]",
+            file = file,
+            append = T
+         )
+
 
       }
 
@@ -1931,7 +2113,7 @@ function(input, output, session) {
          tryCatch(
             {
 
-               lVariablesMetadata = fromJSON(lVariablesMetadata)
+               lVariablesMetadata = fromJSON(paste(lVariablesMetadata, collapse = ''))
 
                lVariablesMetadata = fValidateVariablesMetadata(
                   input = input,
