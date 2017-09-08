@@ -647,6 +647,7 @@ function(input, output, session) {
                collapse = ''
             )
 
+            # check if functions have the mandatory arguments or not
             for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
 
                cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
@@ -669,7 +670,7 @@ function(input, output, session) {
                      pattern = paste0(
                         cOperatorString, 
                         '\\(.*?\\)'
-                     ), 
+                     ),
                      text = cEquation
                   )
 
@@ -1301,6 +1302,71 @@ function(input, output, session) {
    }
 
 
+   fOrderOfEvaluation = function(
+      lVariablesMetadata
+   ) {
+         
+      # Trying to figure out what variables are dependent on what other variables
+      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
+
+      # sorting the list of variables in order of name so that if one variable
+      # name is used inside another variable name then that doesn't cause problems
+      #' @todo this seems to be duplicated with the validation. maybe try and reuse.   
+      dtVariableNameMapping[, NameLength := nchar(VariableName)]
+      setkey(dtVariableNameMapping, NameLength)
+      
+
+      lVariablesMetadata = lapply(
+         lVariablesMetadata,
+         function(lVariableMetadata) {
+
+            # Removing operators and variable names
+            cEquation = lVariableMetadata$cEquation
+
+            vcUpstreamVariables = c()
+
+            if ( !is.null(cEquation) ) {
+
+               for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
+
+                  if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
+
+                     cNewEquation = gsub(
+                        x = cEquation,
+                        pattern = dtVariableNameMapping[iRow, VariableName],
+                        replacement = dtVariableNameMapping[iRow, VariableBackEndName]
+                     )
+
+                     if ( cNewEquation != cEquation ) {
+
+                        cEquation = cNewEquation
+                        vcUpstreamVariables = c(
+                           vcUpstreamVariables,
+                           dtVariableNameMapping[iRow, VariableName]
+                        )
+
+                     }
+
+                  }
+
+               }
+
+
+            }
+
+            # Artifact of strsplit
+            lVariableMetadata$vcUpstreamVariables = vcUpstreamVariables
+
+            lVariableMetadata
+
+         }
+      )
+
+      return (lVariablesMetadata)
+
+   }
+
+
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
    uiPanelToAddVariables = wellPanel(
@@ -1533,57 +1599,8 @@ function(input, output, session) {
       # Trying to figure out what variables are dependent on what other variables
       dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
 
-      # sorting the list of variables in order of name so that if one variable
-      # name is used inside another variable name then that doesn't cause problems
-      #' @todo this seems to be duplicated with the validation. maybe try and reuse.   
-      dtVariableNameMapping[, NameLength := nchar(VariableName)]
-      setkey(dtVariableNameMapping, NameLength)
-      
-
-      lVariablesMetadata = lapply(
-         lVariablesMetadata,
-         function(lVariableMetadata) {
-
-            # Removing operators and variable names
-            cEquation = lVariableMetadata$cEquation
-
-            vcUpstreamVariables = c()
-
-            if ( !is.null(cEquation) ) {
-
-               for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
-
-                  if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
-
-                     cNewEquation = gsub(
-                        x = cEquation,
-                        pattern = dtVariableNameMapping[iRow, VariableName],
-                        replacement = dtVariableNameMapping[iRow, VariableBackEndName]
-                     )
-
-                     if ( cNewEquation != cEquation ) {
-
-                        cEquation = cNewEquation
-                        vcUpstreamVariables = c(
-                           vcUpstreamVariables,
-                           dtVariableNameMapping[iRow, VariableName]
-                        )
-
-                     }
-
-                  }
-
-               }
-
-
-            }
-
-            # Artifact of strsplit
-            lVariableMetadata$vcUpstreamVariables = vcUpstreamVariables
-
-            lVariableMetadata
-
-         }
+      lVariablesMetadata = fOrderOfEvaluation(
+         lVariablesMetadata
       )
 
       cat(
@@ -2114,6 +2131,31 @@ function(input, output, session) {
             {
 
                lVariablesMetadata = fromJSON(paste(lVariablesMetadata, collapse = ''))
+
+               # initialising the other metadata ( which is optional )
+               lVariablesMetadata = lapply(
+                  seq(length(lVariablesMetadata)),
+                  function( iIndex ) {
+
+                     lVariableMetadata = lVariablesMetadata[[iIndex]]
+
+                     lVariableMetadata = append(
+                        lVariableMetadata,
+                        list(
+                           iSequence = 1, 
+                           bIsInput = is.null(lVariableMetadata$cEquation), 
+                           iVariableNumber = iIndex
+                        )
+                     )
+
+                     return ( lVariableMetadata )
+
+                  }
+               )
+
+               lVariablesMetadata = fOrderOfEvaluation(
+                  lVariablesMetadata
+               )
 
                lVariablesMetadata = fValidateVariablesMetadata(
                   input = input,
