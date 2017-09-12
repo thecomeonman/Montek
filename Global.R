@@ -47,3 +47,11 @@ dtAllowedOperations = fread(
 # sorting it in order of longer operators to shorter operators to
 # avoid mix ups with the string parsing
 dtAllowedOperations = dtAllowedOperations[rev(order(nchar(Operator)))]
+
+# adding radians to the trigo functions to prevent any misunderstanding
+sinradian = sin
+asinradian = asin
+cosradian = cos
+acosradian = acos
+tanradian = tan
+atanradian = atan
