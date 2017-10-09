@@ -1301,7 +1301,9 @@ function(input, output, session) {
 
    }
 
-
+   #' Calculate order of evaluation of variables
+   #' Looks at dependencies in the eqations, etc.
+   #' and sequences each ariable accordingly
    fOrderOfEvaluation = function(
       lVariablesMetadata
    ) {
@@ -1366,6 +1368,49 @@ function(input, output, session) {
 
    }
 
+   #' Function to write out variable metadata list as json
+   #' This adds line breaks, etc. and makes it easier to read.
+   #' Default writing is everything in one line and painful to read.
+   fMetaDataToJSONFile = function(
+      lVariablesMetadata,
+      cFileName
+   ) {
+
+      write(
+         "[",
+         file = cFileName
+      )
+
+      for ( y in seq(length(lVariablesMetadata)) ) {
+
+         write(
+            gsub(
+               toJSON(lVariablesMetadata[[y]]), 
+               pattern = ',', 
+               replacement = ',\n\t'
+            ),
+            file = cFileName,
+            append = T
+         )
+         
+         if ( y != length(lVariablesMetadata) ) {
+            write(
+               ',',
+               file = cFileName,
+               append = T
+            )  
+         }
+         
+      }
+
+      write(
+         "]",
+         file = cFileName,
+         append = T
+      )
+
+   }
+
 
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
@@ -1396,8 +1441,6 @@ function(input, output, session) {
       where = "afterEnd",
       uiPanelToAddVariables
    )
-
-    
 
    # Help button work
    output[['dtAllowedOperations']] = renderDataTable(
@@ -2049,37 +2092,9 @@ function(input, output, session) {
 
          lVariablesMetadata = lReactiveValues$lVariablesMetadata
 
-         write(
-            "[",
-            file = file
-         )
-
-         for ( y in seq(length(lVariablesMetadata)) ) {
-
-            write(
-               gsub(
-                  toJSON(lVariablesMetadata[[y]]), 
-                  pattern = ',', 
-                  replacement = ',\n\t'
-               ),
-               file = file,
-               append = T
-            )
-            
-            if ( y != length(lVariablesMetadata) ) {
-               write(
-                  ',',
-                  file = file,
-                  append = T
-               )  
-            }
-            
-         }
-
-         write(
-            "]",
-            file = file,
-            append = T
+         fMetaDataToJSONFile(
+            lVariablesMetadata = lVariablesMetadata,
+            cFileName = file
          )
 
 
@@ -2573,8 +2588,79 @@ function(input, output, session) {
       }
    )
 
+   
+   # populating the list of available scenarios
+   observe({
 
+      # if new scenario has been saved then
+      # it needs to be made available
+      input$actionButtonSaveScenarioOnCloud
 
+      vcScenariosOnCloud = list.files(
+         paste0(
+            lArchitectureParms$cAtherDataLocation,
+            '/Processed/MonteCarloScenarios'
+         ),
+         full.names = T
+      )
+
+      names(vcScenariosOnCloud) = gsub(
+         vcScenariosOnCloud,
+         pattern = '.*/',
+         replacement = ''
+      )
+
+      updateSelectizeInput(
+         session = session,
+         inputId = 'selectizeInputLoadScenarioFromCloud',
+         choices = vcScenariosOnCloud
+      )
+
+   })
+    
+
+    observeEvent(
+      input$actionButtonSaveScenarioOnCloud, {
+
+         lVariablesMetadata = lReactiveValues[['lVariablesMetadata']]
+         textInputSaveScenarioOnCloud = input[['textInputSaveScenarioOnCloud']]
+
+         cFileName = paste0(
+            lArchitectureParms$cAtherDataLocation,
+            '/Processed/MonteCarloScenarios/',
+            textInputSaveScenarioOnCloud
+         )
+
+         if ( file.exists(cFileName) ) {
+
+            showModal(
+               modalDialog(
+                  title = "Warning",
+                  h6('File overwrites not allowed. Please rename.'),
+                  easyClose = TRUE,
+                  footer = NULL
+               )
+            )
+
+         } else {
+
+            fMetaDataToJSONFile(
+               lVariablesMetadata = lVariablesMetadata,
+               cFileName = cFileName
+            )
+
+            showModal(
+               modalDialog(
+                  h6('Saved.'),
+                  easyClose = TRUE,
+                  footer = NULL
+               )
+            )
+
+         }
+
+      }
+   )
 
 
 }

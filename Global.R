@@ -14,19 +14,19 @@ lArchitectureParms = list()
 
 # Should point to where you've downloaded the repository
 # This is the path used to read other assets like the file needed for dtAllowedOperations
-lArchitectureParms$cRootDirectory = Sys.getenv('AtherGitRepo') 
+lArchitectureParms$cRootDirectory = Sys.getenv('AtherGitRepo')
 lArchitectureParms$cRootDirectory = ifelse(
    lArchitectureParms$cRootDirectory == '',
    '/mnt/disks/vi-data/AtherGit',
    lArchitectureParms$cRootDirectory
 )
 
-# lArchitectureParms$cAtherDataLocation = Sys.getenv('AtherDataLocation')
-# lArchitectureParms$cAtherDataLocation = ifelse(
-#    lArchitectureParms$cAtherDataLocation == '',
-#    '/mnt/disks/vi-data/Data',
-#    lArchitectureParms$cAtherDataLocation
-# )
+lArchitectureParms$cAtherDataLocation = Sys.getenv('AtherDataLocation')
+lArchitectureParms$cAtherDataLocation = ifelse(
+   lArchitectureParms$cAtherDataLocation == '',
+   '/mnt/disks/vi-data/Data',
+   lArchitectureParms$cAtherDataLocation
+)
 
 # The number of variables that a user is allowed to add
 iRandomlyLargeNumberForVariables = 99
