@@ -598,7 +598,7 @@ function(input, output, session) {
       }
 
       # Check for invalid equations
-      dtVariableNameMapping[, NameLength := nchar(VariableName)]
+      dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
       
 
@@ -1019,9 +1019,8 @@ function(input, output, session) {
 
       # order variable names in decreasing order of length.
       # this is to avoid tragedies whereone variable name containts another
-      dtVariableNameMapping[, NameLength := nchar(VariableName)]
+      dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
-      dtVariableNameMapping = dtVariableNameMapping[.N:1]
 
       lReactiveValuesPlaceholder = list()
 
@@ -1130,22 +1129,7 @@ function(input, output, session) {
 
                   # Adding default arguments
 
-                  print(cEquation)
-
                   for ( iAddDefaultArgumentsFor in dtAllowedOperations[, which(is.na(DefaultArguments) | DefaultArguments != '' )] ) {
-
-                     print(iAddDefaultArgumentsFor)
-                     print(dtAllowedOperations[iAddDefaultArgumentsFor])
-                     print(paste0(
-                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
-                           '('
-                        ))
-                     print(paste0(
-                           dtAllowedOperations[iAddDefaultArgumentsFor, OperatorString],
-                           '(', 
-                           dtAllowedOperations[iAddDefaultArgumentsFor, DefaultArguments],
-                           ','
-                        ))
 
                      cEquation = gsub(
                         x = cEquation,
@@ -1160,8 +1144,6 @@ function(input, output, session) {
                            ','
                         )
                      )
-
-                     print(cEquation)
 
                   }
 
@@ -1314,7 +1296,7 @@ function(input, output, session) {
       # sorting the list of variables in order of name so that if one variable
       # name is used inside another variable name then that doesn't cause problems
       #' @todo this seems to be duplicated with the validation. maybe try and reuse.   
-      dtVariableNameMapping[, NameLength := nchar(VariableName)]
+      dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
       
 
