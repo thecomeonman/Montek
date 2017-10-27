@@ -475,6 +475,15 @@ function(input, output, session) {
    ) {
 
 
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            'fValidateVariablesMetadata'
+         )
+      )
+
+
       # Getting a list of all the variable names
       vcVariableNames = sapply(
          lVariablesMetadata,
@@ -507,6 +516,15 @@ function(input, output, session) {
       }
       
       names(lVariablesMetadata) = vcVariableNames
+
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfValidateVariablesMetadata: Operators in variable names'
+         )
+
+      )
 
       # check for operators in variable names
       # @todo we should probably not need to this if we can change 
@@ -572,6 +590,15 @@ function(input, output, session) {
 
       }
 
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfValidateVariablesMetadata: duplicate varibable names'
+         )
+
+      )
+
 
       # check for duplicate variable names
       viVariableNameCount = table(vcVariableNames)
@@ -596,6 +623,15 @@ function(input, output, session) {
          return ( lMainNotification )
 
       }
+
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfValidateVariablesMetadata: invalid equations'
+         )
+
+      )
 
       # Check for invalid equations
       dtVariableNameMapping[, NameLength := -nchar(VariableName)]
@@ -639,6 +675,7 @@ function(input, output, session) {
                   x = as.character(cEquation),
                   split = cPattern
                ))
+
 
             }
 
@@ -744,19 +781,35 @@ function(input, output, session) {
 
             }
 
-            cEquation = strsplit(
-               cEquation,
-               '\\)'
-            )
+            if ( nchar(cEquation) > 0 ) {            
 
-            cEquation = strsplit(
-               unlist(cEquation),
-               '\\('
-            )
+               cEquation = strsplit(
+                  cEquation,
+                  '\\)'
+               )
+
+               cEquation = strsplit(
+                  unlist(cEquation),
+                  '\\('
+               )
+
+               cEquation = strsplit(
+                  unlist(cEquation),
+                  ' '
+               )
+
+               cEquation = strsplit(
+                  unlist(cEquation),
+                  '\t'
+               )
+
+            }
 
             if ( length(cEquation) > 0) {
+
                if ( any(nchar(cEquation) > 0) ) {
-                  if ( any(is.na(as.numeric(cEquation))) ) {
+
+                  if ( any(is.na(as.numeric(unlist(cEquation[sapply(cEquation, nchar)>0])))) ) {
 
                      cReturn = paste0(
                         lVariableMetadata$cVariableName,
@@ -782,7 +835,6 @@ function(input, output, session) {
 
       if ( any(!is.null(vcNotification)) )  {
 
-
          lMainNotification = list(
             cMessage = paste0(
                "Unable to evaluate some terms:<br/>",
@@ -798,6 +850,14 @@ function(input, output, session) {
 
       }
 
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfValidateVariablesMetadata: missing equations'
+         )
+
+      )
 
       # Check for missing equations
       vcNotification = sapply(
@@ -849,7 +909,14 @@ function(input, output, session) {
 
       }
 
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfValidateVariablesMetadata: what is this exactly?'
+         )
 
+      )
 
       # Step 1 of this function is calculating order of evaluation
       # The logic is basically to find the currently assigned sequence of evaluation
@@ -995,6 +1062,15 @@ function(input, output, session) {
       dtAllowedOperations
    ) {
 
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            '\nfEvaluateVariables:'
+         )
+      )
+
+
       #' @todo The utility of some variables is not beyond certain other variables
       #' so try and implement logic to get rid of these variables to save memory
 
@@ -1031,7 +1107,19 @@ function(input, output, session) {
 
             for ( iVariableNumber in vcEvaluationOrder ) {
 
+
                lVariableMetadata = lVariablesMetadata[[iVariableNumber]]
+
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     '\nfEvaluateVariables:',
+                     lVariableMetadata$iVariableNumber,
+                     lVariableMetadata$cVariableName
+                  )
+               )
+
                bIsInput = lVariableMetadata$bIsInput
 
                # input variable evaluation logic is simple. 
@@ -1088,7 +1176,6 @@ function(input, output, session) {
 
                   }
 
-
                # output variable evaluation logic
                } else {
 
@@ -1116,7 +1203,6 @@ function(input, output, session) {
                         }
 
                      }
-
                   }
 
                   # @todo Should ensure that no function ever has an overlap with any of the variable names
@@ -1124,7 +1210,7 @@ function(input, output, session) {
 
                   bNeedsLoop = grepl(
                      x = cEquation, 
-                     pattern = dtAllowedOperations[Vectorised == T, paste(OperatorString, collapse = '|')]
+                     pattern = dtAllowedOperations[Vectorised == F, paste(OperatorString, collapse = '|')]
                   ) & bNeedsLoop
 
                   # Adding default arguments
@@ -1161,6 +1247,13 @@ function(input, output, session) {
 
                      iIndex = 1:iIterations
                      vnDistribution = eval(parse(text = cEquation))
+
+                     if ( length(vnDistribution) == 1 ) {
+                        vnDistribution = rep(
+                           vnDistribution,
+                           iIterations
+                        )
+                     }
 
                   }
 
@@ -1216,7 +1309,12 @@ function(input, output, session) {
 
                }
 
-               
+
+               save(
+                  list = paste0('Variable', iVariableNumber), 
+                  file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
+               )
+
             }
 
             # Setting the flag to T so that subsequent code knows evaluation is done
@@ -1226,12 +1324,14 @@ function(input, output, session) {
          error = function(e) {
 
             # bEverythingEvaluated = F
+            save(list = ls(), file = '/tmp/MCFailed.Rdata')
 
          }
 
       )
 
       # Depending on whether the evaluation finished, return an error message or the result
+      # iVariableNumber will be the loop on which it errored out
       if ( bEverythingEvaluated ) {
 
          return ( lReactiveValuesPlaceholder )
@@ -1243,17 +1343,17 @@ function(input, output, session) {
                'Problem in calculating<br/>', 
                lVariablesMetadata[[iVariableNumber]]$cVariableName,
                ifelse(
-                  bIsInput,
+                  lVariablesMetadata[[iVariableNumber]]$bIsInput,
                   paste(
                      unlist(
                         c(
-                           'Distribution:', cDistribution,
-                           '<br/>Lower Bound: ', nDistributionLowerBound,
-                           '<br/>Upper Bound: ', nDistributionUpperBound,
+                           'Distribution:', lVariablesMetadata[[iVariableNumber]]$cDistribution,
+                           '<br/>Lower Bound: ', lVariablesMetadata[[iVariableNumber]]$nDistributionLowerBound,
+                           '<br/>Upper Bound: ', lVariablesMetadata[[iVariableNumber]]$nDistributionUpperBound,
                            '<br/>Parameters: ', paste(
-                              names(lParameters),
+                              names(lVariablesMetadata[[iVariableNumber]]$lParameters),
                               unlist(
-                                 lParameters
+                                 lVariablesMetadata[[iVariableNumber]]$lParameters
                               ),
                               collapse = ' '
                            )
@@ -1289,6 +1389,17 @@ function(input, output, session) {
    fOrderOfEvaluation = function(
       lVariablesMetadata
    ) {
+
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            'fOrderOfEvaluation',
+            '\n'
+
+         )
+
+      )      
          
       # Trying to figure out what variables are dependent on what other variables
       dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
@@ -1303,6 +1414,16 @@ function(input, output, session) {
       lVariablesMetadata = lapply(
          lVariablesMetadata,
          function(lVariableMetadata) {
+
+            cat(
+               file = stderr(),
+               paste(
+                  Sys.time(),
+                  '\nfOrderOfEvaluation:',
+                  lVariableMetadata$cVariableName
+               )
+
+            )
 
             # Removing operators and variable names
             cEquation = lVariableMetadata$cEquation
@@ -1887,6 +2008,14 @@ function(input, output, session) {
    observeEvent(
       input$actionButtonAddVariable, {
 
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'actionButtonAddVariable'
+            )
+         )
+
          iVariableNumber = lReactiveValues$iTotalVariables + 1
 
          vcEmpiricalDistributionNames = isolate(
@@ -2089,6 +2218,14 @@ function(input, output, session) {
    observe(
       {
 
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'Uploading a scenario'
+            )
+         )
+
          fileInputUploadScenario = input$fileInputUploadScenario
 
          if ( is.null(fileInputUploadScenario) ) {
@@ -2107,16 +2244,6 @@ function(input, output, session) {
             fileInputUploadScenario$datapath
          )
 
-
-         cat(
-            file = stderr(),
-            paste(
-               Sys.time(),
-               'fileInputUploadScenario: Basic checks'
-            )
-
-         )
-
          progress$set(
             message = 'Upload: Basic checks'
          )
@@ -2126,6 +2253,15 @@ function(input, output, session) {
          # Validate the uploaded scenario
          tryCatch(
             {
+
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fileInputUploadScenario: Basic checks'
+                  )
+
+               )
 
                lVariablesMetadata = fromJSON(paste(lVariablesMetadata, collapse = ''))
 
@@ -2150,8 +2286,26 @@ function(input, output, session) {
                   }
                )
 
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fileInputUploadScenario: Order of evaluation'
+                  )
+
+               )
+
                lVariablesMetadata = fOrderOfEvaluation(
                   lVariablesMetadata
+               )
+
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fileInputUploadScenario: Validating variable metadata'
+                  )
+
                )
 
                lVariablesMetadata = fValidateVariablesMetadata(
@@ -2160,10 +2314,9 @@ function(input, output, session) {
                   dtAllowedOperations = dtAllowedOperations
                )
 
-
                if ( !is.null(lVariablesMetadata$cType) ) {
 
-                  lReactiveValues$lMainNotification = lMainNotification
+                  lReactiveValues$lMainNotification = lVariablesMetadata
                   return ( NULL )
 
                }
@@ -2178,15 +2331,17 @@ function(input, output, session) {
                showModal(
                   modalDialog(
                      title = "Error!",
-                     "There is something wrong with the uploaded file. Contact the author.",
+                     paste0(
+                        "There is something wrong with the uploaded file. Contact the author."
+                     ),
                      easyClose = TRUE,
                      footer = NULL
                   )
                )
 
+               lVariablesMetadata = NULL
 
                return ( NULL )
-
 
             }
 
@@ -2334,6 +2489,14 @@ function(input, output, session) {
    # Adding empirical distributions
    observe(
       {
+
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'Adding empirical distributions'
+            )
+         )
 
          fileInputEmpiricalData = input$fileInputEmpiricalData
          iTotalEmpiricals = isolate(lReactiveValues$iTotalEmpiricals)
@@ -2489,6 +2652,14 @@ function(input, output, session) {
    observeEvent(
       input$actionButtonUploadEmpiricalDistributions,
       {
+
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'actionButtonUploadEmpiricalDistributions'
+            )
+         )
 
          # Show modal dialog which, at this point, has no distributions
          showModal(

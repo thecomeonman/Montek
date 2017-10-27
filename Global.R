@@ -21,6 +21,7 @@ lArchitectureParms$cRootDirectory = ifelse(
    lArchitectureParms$cRootDirectory
 )
 
+# should point to some location where you want to save the scenarios
 lArchitectureParms$cAtherDataLocation = Sys.getenv('AtherDataLocation')
 lArchitectureParms$cAtherDataLocation = ifelse(
    lArchitectureParms$cAtherDataLocation == '',
@@ -35,8 +36,6 @@ iRandomlyLargeNumberForVariables = 99
 iRandomlyLargeNumberForEmpirical = 99
 
 # The operations that a user is allowed
-# vcOperators = c('-',',','ifelse','==','>','<','>=','<=','log')
-# vcOperatorsSpecialCharacters = c('+','*','(',')','^')
 dtAllowedOperations = fread(
    paste0(
       lArchitectureParms$cRootDirectory,
