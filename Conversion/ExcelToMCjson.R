@@ -1,10 +1,9 @@
-# t15 points to 16
-# bc13 has two columns why
-
 rm(list = ls())
 
+library(data.table)
+library(rjson)
 
-
+cFileName = 'bodyworks-Front bodyworks.csv'
 
 
 
@@ -61,14 +60,14 @@ fMetaDataToJSONFile = function(
 
 
 
-
-library(data.table)
-library(rjson)
-
-dtStackFormulae = fread('/home/adityakothari/angular offset pulley 1 to pulley 2 mid frame.csv')
-
-
-
+dtStackFormulae = fread(
+   paste0('/home/adityakothari/Desktop/MCCSVs/', cFileName)
+)
+cScenarioFileName = gsub(
+   x = cFileName,
+   pattern = 'csv',
+   replacement = 'json'
+)
 
 
 fTranslateFormula = function( vcFormulae ) {
@@ -419,5 +418,5 @@ lVariablesMetadata = lapply(
 
 fMetaDataToJSONFile(
    lVariablesMetadata = lVariablesMetadata,
-   cFileName = '/home/adityakothari/something.json'
+   cFileName = paste0('/home/adityakothari/Desktop/MCJSONs/', cScenarioFileName)
 )
