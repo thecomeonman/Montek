@@ -1578,6 +1578,22 @@ function(input, output, session) {
    )
    
 
+   observeEvent(
+      input$actionButtonHelp, {
+
+         showModal(
+            modalDialog(
+               title = "Help Section",
+               dataTableOutput('dtAllowedOperations'),
+               easyClose = TRUE,
+               footer = NULL
+            )
+         )
+
+      }
+   )
+   
+
 
    # Where it all happens
    observeEvent(
@@ -2054,6 +2070,92 @@ function(input, output, session) {
 
 
    # Compiling the variable summaries to prepare a run summary
+   output[['dtRunLayout']] = renderDataTable(
+      {
+
+         lVariablesMetadata = isolate(lReactiveValues$lVariablesMetadata)
+
+         dtLaidoutSummary = rbindlist(
+            lapply(
+               lVariablesMetadata,
+               function( lVariableMetadata ) {
+                  
+                  dtReturn = data.table(
+                     VariableName = lVariableMetadata$cVariableName
+                  )
+                  
+               
+                  if ( !is.null(lVariableMetadata$cEquation) ) {
+                     
+                     cContent = lVariableMetadata$cEquation
+                     
+                  } else {
+                     
+                     cContent = paste0(
+                        c(
+                           lVariableMetadata$cDistribution,
+                           paste0('[',lVariableMetadata$nDistributionUpperBound,',',lVariableMetadata$nDistributionLowerBound,']'),
+                           sapply(
+                              seq(length(lVariableMetadata$lParameters)),
+                              function( iParmIndex ) {
+                                 paste0(names(lVariableMetadata$lParameters)[iParmIndex], ':', lVariableMetadata$lParameters[iParmIndex] ) 
+                              }
+                           )
+                        ),
+                        collapse = '<br>'
+                     )
+                     
+                     lVariableMetadata$cEquation
+                     
+                  }
+                  
+                  dtReturn[, Content := cContent]
+                  
+               }
+            )
+         )
+
+         dtLaidoutSummary[,
+           Variable := VariableName
+         ]
+
+         dtLaidoutSummary[,
+           Type := ''
+         ]
+
+         dtLaidoutSummary[
+            grepl(x = VariableName, pattern = '_'), 
+            Variable := paste(rev(rev(unlist(strsplit(VariableName, '_')))[-1]), collapse = '_'), 
+            VariableName
+         ]
+
+         dtLaidoutSummary[
+            grepl(x = VariableName, pattern = '_'), 
+            Type := rev(unlist(strsplit(VariableName, '_')))[1], 
+            VariableName
+         ]
+
+         dtLaidoutSummary = dcast(
+            dtLaidoutSummary, 
+            Type ~ Variable, 
+            value.var = 'Content'
+         )
+
+         dtLaidoutSummary
+
+      },         
+      extensions = c('FixedColumns',"FixedHeader"),
+      escape = F,
+      options = list(
+         bLengthChange = F,
+         pageLength = 10,
+         scrollX = T,
+         fixedColumns = list(leftColumns = 2)
+      )
+   )
+
+
+   # Compiling the variable summaries to prepare a run summary
    output[['dtRunSummary']] = renderDataTable(
       {
 
@@ -2141,13 +2243,18 @@ function(input, output, session) {
          showModal(
             modalDialog(
                title = "Run summary",
+               h4('Formulation summary'),
+               dataTableOutput('dtRunLayout'),
+               hr(),
                downloadButton(
                   outputId = 'downloadSummary',
                   label = "Download Summary"
                ),
+               h4('Results summary'),
                dataTableOutput('dtRunSummary'),
                easyClose = TRUE,
-               footer = NULL
+               footer = NULL,
+               size = 'l'
             )
          )
 
@@ -2450,6 +2557,11 @@ function(input, output, session) {
             iIterations = input$Iterations,
             lVariablesMetadata,
             dtAllowedOperations
+         )
+
+         save(
+            list = 'lVariablesMetadata',
+            file = '/tmp/lVariablesMetadata.Rdata'
          )
 
          if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
