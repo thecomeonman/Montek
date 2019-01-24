@@ -44,7 +44,7 @@ iRandomlyLargeNumberForEmpirical = 99
 dtAllowedOperations = fread(
    paste0(
       lArchitectureParms$cRootDirectory,
-      '/MonteCarloTool/Metadata/Operations.csv'
+      '/Rhyhorn/Metadata/Operations.csv'
    ),
    sep = ';'
 )
