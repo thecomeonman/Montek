@@ -68,7 +68,8 @@ function(input, output, session) {
             function ( lVariableMetadata ) {
                data.table(
                   VariableNumber = lVariableMetadata$iVariableNumber,
-                  VariableBackEndName = paste0('Variable',lVariableMetadata$iVariableNumber),
+                  VariableBackEndName = paste0(cTempVariableString, lVariableMetadata$iVariableNumber),
+                  # VariableBackEndName = paste0('Variable',lVariableMetadata$iVariableNumber),
                   VariableName = lVariableMetadata$cVariableName
                )
             }
@@ -1204,6 +1205,12 @@ function(input, output, session) {
 
                      }
                   }
+
+                  cEquation = gsub(
+                     x = cEquation,
+                     pattern = cTempVariableString,
+                     replacement = 'Variable'
+                  )
 
                   # @todo Should ensure that no function ever has an overlap with any of the variable names
                   # otherwise some equations will be unnecessarily be looped and not vectorised

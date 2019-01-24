@@ -30,9 +30,14 @@ lArchitectureParms$cAtherDataLocation = ifelse(
 )
 
 # The number of variables that a user is allowed to add
+# You can increase this, if you wish. This is the number of placeholders for
+# variables that get created so a smaller number is more efficient.
 iRandomlyLargeNumberForVariables = 99
 
 # The number of empirical distributions that a user is allowed to add
+# You can increase this, if you wish. This is the number of placeholders for
+# empirical distributions that get created so a smaller number is more 
+# efficient.
 iRandomlyLargeNumberForEmpirical = 99
 
 # The operations that a user is allowed
@@ -54,3 +59,9 @@ cosradian = cos
 acosradian = acos
 tanradian = tan
 atanradian = atan
+
+# My expectation of a string that will never get encountered in a variable
+# name that is set. If you want to use this character then change this
+# string to anything else you want which you are unlikely to enounter in
+# your variable names.
+cTempVariableString = 'Д'
