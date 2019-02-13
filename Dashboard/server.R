@@ -1131,47 +1131,74 @@ function(input, output, session) {
                   nDistributionUpperBound = lVariableMetadata$nDistributionUpperBound
                   lParameters = lVariableMetadata$lParameters
 
-                  # Add logic for new distributions here
-                  vnDistribution = switch(
-                     cDistribution,
-                     Normal = rnorm(
-                        n = iIterations,
-                        mean = lParameters$nNormalMean,
-                        sd = lParameters$nNormalSD
-                     ),
-                     Beta = rbeta(
-                        n = iIterations,
-                        shape1 = lParameters$nBetaShapeAlpha,
-                        shape2 = lParameters$nBetaShapeBeta
-                     ),
-                     Uniform = fUniformDistribution(
-                        iIterations = iIterations,
-                        nLowerBound = nDistributionLowerBound,
-                        nUpperBound = nDistributionUpperBound
-                     ),
-                     Constant = rep(
-                        lParameters$nConstant,
-                        iIterations
-                     ),
-                     Empirical = fSampleFromEmpirical(
-                        lReactiveValues = lReactiveValues,
-                        cEmpiricalDistributionName = lParameters$cEmpiricalDistributionName,
-                        iIterations = iIterations
+                  vnDistribution = c()
+
+                  repeat {
+
+                     # Add logic for new distributions here
+                     vnIntermediateDistribution = switch(
+                        cDistribution,
+                        Normal = rnorm(
+                           n = iIterations,
+                           mean = lParameters$nNormalMean,
+                           sd = lParameters$nNormalSD
+                        ),
+                        Beta = rbeta(
+                           n = iIterations,
+                           shape1 = lParameters$nBetaShapeAlpha,
+                           shape2 = lParameters$nBetaShapeBeta
+                        ),
+                        Uniform = fUniformDistribution(
+                           iIterations = iIterations,
+                           nLowerBound = nDistributionLowerBound,
+                           nUpperBound = nDistributionUpperBound
+                        ),
+                        Constant = rep(
+                           lParameters$nConstant,
+                           iIterations
+                        ),
+                        Empirical = fSampleFromEmpirical(
+                           lReactiveValues = lReactiveValues,
+                           cEmpiricalDistributionName = lParameters$cEmpiricalDistributionName,
+                           iIterations = iIterations
+                        )
                      )
 
-                  )
+                     if ( !cDistribution %in% c('Constant', 'Uniform') ) {
 
-                  if ( !cDistribution %in% c('Constant', 'Uniform') ) {
+                        if ( nDistributionUpperBound != nDistributionLowerBound ) {
 
-                     if ( nDistributionUpperBound != nDistributionLowerBound ) {
+                           # This was wrong. You don't have to cap the
+                           # the distribution, you have to generate the 
+                           # samples from within the bounds
+                           # vnDistribution = pmax(
+                           #    nDistributionLowerBound,
+                           #    pmin(
+                           #       vnDistribution,
+                           #       nDistributionUpperBound
+                           #    )
+                           # )
 
-                        vnDistribution = pmax(
-                           nDistributionLowerBound,
-                           pmin(
-                              vnDistribution,
-                              nDistributionUpperBound
-                           )
+                           vnIntermediateDistribution = vnIntermediateDistribution[
+                              vnIntermediateDistribution <= nDistributionUpperBound &
+                              nDistributionLowerBound <= vnIntermediateDistribution 
+                           ]
+
+                        }
+
+                        vnDistribution = c(
+                           vnDistribution,
+                           vnIntermediateDistribution
                         )
+
+                     } else {
+                        vnDistribution = vnIntermediateDistribution
+                     }
+
+                     if ( length(vnDistribution) >=  iIterations ) {
+
+                        vnDistribution = vnDistribution[1:iIterations]
+                        break
 
                      }
 
@@ -1303,7 +1330,7 @@ function(input, output, session) {
                   )
                )
 
-               lReactiveValues[[paste0('dtVariableSummary',iVariableNumber)]] = dtVariableSummary
+               lReactiveValues[[paste0('dtVariableSummary', iVariableNumber)]] = dtVariableSummary
 
                if ( 
                   dtVariableSummary[Statistic == 'Worst (min)', Value] == dtVariableSummary[Statistic == 'Worst (max)', Value]
@@ -1316,11 +1343,10 @@ function(input, output, session) {
 
                }
 
-
-               save(
-                  list = paste0('Variable', iVariableNumber), 
-                  file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
-               )
+               # save(
+               #    list = paste0('Variable', iVariableNumber), 
+               #    file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
+               # )
 
             }
 
