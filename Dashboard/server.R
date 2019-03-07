@@ -354,6 +354,16 @@ function(input, output, session) {
                      plotOutput(
                         paste0('DistributionChartCDF', iVariableNumber)
                      )
+                  ),
+                  box(
+                     width = 12,
+                     collapsible = T,
+                     collapsed = T,
+                     title = 'Sensitivity',
+                     status = 'warning',
+                     dataTableOutput(
+                        paste0('SensitivityDetails', iVariableNumber)
+                     )
                   )
                )
             )
@@ -1207,6 +1217,9 @@ function(input, output, session) {
                # output variable evaluation logic
                } else {
 
+                  print(str(lVariableMetadata))
+                  print('~~~~~~~~~~~~~~~')
+
                   cEquation = lVariableMetadata$cEquation
 
                   bNeedsLoop = F
@@ -1267,7 +1280,6 @@ function(input, output, session) {
 
                   }
 
-
                   if ( bNeedsLoop ) {
 
                      vnDistribution = sapply(
@@ -1290,6 +1302,52 @@ function(input, output, session) {
                      }
 
                   }
+
+
+                  viVariablesToMeasureSensitivtyAgainst = fGetAllUpstreamVariableNumbers (
+                     lVariableMetadata$iVariableNumber,
+                     lVariablesMetadata,
+                     bRecursive = F
+                  )
+
+                  # Spearman's correlation
+                  vnCorrelations = sapply(
+                     # dtVariableDetails[Input == T, VariableName],
+                     viVariablesToMeasureSensitivtyAgainst,
+                     function ( iVariableToMeasureSensitivtyAgainst ) {
+
+                        cor(
+                           get(
+                              paste0(
+                                 'Variable', 
+                                 iVariableToMeasureSensitivtyAgainst
+                              )
+                           ),
+                           vnDistribution
+                        )
+                        
+                     }
+                  )
+
+                  # This is what Crystal Ball is doing as contribution to variance :|
+                  # https://docs.oracle.com/cd/E12825_01/epm.111/cb_user/frameset.htm?ch07s04s03.html
+
+                  dtSensitivity = data.table(
+                     VariableName = sapply(
+                        viVariablesToMeasureSensitivtyAgainst,
+                        function ( iVariableToMeasureSensitivtyAgainst ) {
+                           lVariablesMetadata[[iVariableToMeasureSensitivtyAgainst]]$cVariableName
+                        }
+                     ),
+                     Correlations = vnCorrelations,
+                     VarianceContribution = vnCorrelations^2 / sum(vnCorrelations^2, na.rm = T)
+                  )
+
+                  dtSensitivity = dtSensitivity[
+                     order(VarianceContribution)
+                  ]
+
+                  lReactiveValues[[paste0('dtSensitivity', iVariableNumber)]] = dtSensitivity
 
                }
 
@@ -1343,10 +1401,10 @@ function(input, output, session) {
 
                }
 
-               save(
-                  list = paste0('Variable', iVariableNumber), 
-                  file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
-               )
+               # save(
+               #    list = paste0('Variable', iVariableNumber), 
+               #    file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
+               # )
 
             }
 
@@ -1547,6 +1605,86 @@ function(input, output, session) {
 
    }
 
+   fGetAllUpstreamVariableNumbers = function (
+      iChosenVariableNumber,
+      lVariablesMetadata,
+      bRecursive = F
+   ) {
+
+      vcUpstreamVariables = sapply(
+         lVariablesMetadata,
+         function ( lVariableMetadata ) {
+            
+            vcUpstreamVariables = c()
+
+            if ( lVariableMetadata$iVariableNumber == iChosenVariableNumber ) {
+
+               vcUpstreamVariables = lVariableMetadata$vcUpstreamVariables
+
+            }
+
+            return ( vcUpstreamVariables )
+
+         }
+      )
+
+      vcUpstreamVariables = unlist(vcUpstreamVariables)
+
+      viVariablesToMeasureSensitivtyAgainst = sapply(
+         lVariablesMetadata,
+         function ( lVariableMetadata2 ) {
+            
+            iVariableNumber = NULL
+
+            if ( lVariableMetadata2$cVariableName %in% vcUpstreamVariables ) {
+
+               iVariableNumber = lVariableMetadata2$iVariableNumber
+
+            }
+
+            return ( iVariableNumber )
+
+         }
+      )
+
+      viVariablesToMeasureSensitivtyAgainst = unlist(
+         viVariablesToMeasureSensitivtyAgainst
+      )
+      
+      viVariablesToMeasureSensitivtyAgainst = unique(
+         viVariablesToMeasureSensitivtyAgainst
+      )
+
+      if ( bRecursive == T ) {
+
+         viVariablesToMeasureSensitivtyAgainst = c(
+            viVariablesToMeasureSensitivtyAgainst,
+            sapply(
+               viVariablesToMeasureSensitivtyAgainst,
+               function ( iVariableToMeasureSensitivtyAgainst ) {
+                  fGetAllUpstreamVariableNumbers(
+                     iChosenVariableNumber = iVariableToMeasureSensitivtyAgainst,
+                     lVariablesMetadata,
+                     bRecursive = bRecursive
+                  )
+               }
+            )
+         )
+
+      }
+
+      viVariablesToMeasureSensitivtyAgainst = unlist(
+         viVariablesToMeasureSensitivtyAgainst
+      )
+
+      viVariablesToMeasureSensitivtyAgainst = unique(
+         viVariablesToMeasureSensitivtyAgainst
+      )
+
+      return ( viVariablesToMeasureSensitivtyAgainst )
+
+   }
+   
 
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
@@ -1973,6 +2111,29 @@ function(input, output, session) {
             )
          )
            
+
+         # DistributionDetails
+         output[[paste0('SensitivityDetails', iLocalVariableNumber)]] = renderDataTable(
+            {
+
+               dtSensitivity = lReactiveValues[[paste0('dtSensitivity', iLocalVariableNumber)]]
+
+               if ( is.null(dtSensitivity) ) return ( NULL )
+
+               datatable(dtSensitivity)
+
+            },
+            options = list(
+               bLengthChange = F,
+               pageLength = 10,
+               searching = F
+            )
+            # %>% 
+            #    formatRound(
+            #       c('Correlations','VarianceContribution'), 
+            #       2
+            #    )
+         ) 
 
          # DistributionSummary
          output[[paste0('DistributionSummary', iLocalVariableNumber)]] = renderDataTable(
