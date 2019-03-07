@@ -25,7 +25,7 @@ body = dashboardBody(
                   numericInput(
                      inputId = 'Iterations', 
                      label = 'Iterations', 
-                     value = 100000, 
+                     value = 10000, 
                      min = 0, 
                      step = 1
                   )
