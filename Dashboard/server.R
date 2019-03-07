@@ -1343,10 +1343,10 @@ function(input, output, session) {
 
                }
 
-               # save(
-               #    list = paste0('Variable', iVariableNumber), 
-               #    file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
-               # )
+               save(
+                  list = paste0('Variable', iVariableNumber), 
+                  file = paste0('/tmp/',paste0('Variable', iVariableNumber),'.Rdata')
+               )
 
             }
 
@@ -2592,10 +2592,10 @@ function(input, output, session) {
             dtAllowedOperations
          )
 
-         save(
-            list = 'lVariablesMetadata',
-            file = '/tmp/lVariablesMetadata.Rdata'
-         )
+         # save(
+         #    list = 'lVariablesMetadata',
+         #    file = '/tmp/lVariablesMetadata.Rdata'
+         # )
 
          if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
 
