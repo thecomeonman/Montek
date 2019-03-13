@@ -1304,23 +1304,23 @@ function(input, output, session) {
                   }
 
 
-                  viVariablesToMeasureSensitivtyAgainst = fGetAllUpstreamVariableNumbers (
+                  viVariablesToMeasureSensitivityAgainst = fGetAllUpstreamVariableNumbers (
                      lVariableMetadata$iVariableNumber,
                      lVariablesMetadata,
-                     bRecursive = F
+                     bGiveIndependentVariables = T
                   )
 
                   # Spearman's correlation
                   vnCorrelations = sapply(
                      # dtVariableDetails[Input == T, VariableName],
-                     viVariablesToMeasureSensitivtyAgainst,
-                     function ( iVariableToMeasureSensitivtyAgainst ) {
+                     viVariablesToMeasureSensitivityAgainst,
+                     function ( iVariableToMeasureSensitivityAgainst ) {
 
                         cor(
                            get(
                               paste0(
                                  'Variable', 
-                                 iVariableToMeasureSensitivtyAgainst
+                                 iVariableToMeasureSensitivityAgainst
                               )
                            ),
                            vnDistribution
@@ -1334,9 +1334,9 @@ function(input, output, session) {
 
                   dtSensitivity = data.table(
                      VariableName = sapply(
-                        viVariablesToMeasureSensitivtyAgainst,
-                        function ( iVariableToMeasureSensitivtyAgainst ) {
-                           lVariablesMetadata[[iVariableToMeasureSensitivtyAgainst]]$cVariableName
+                        viVariablesToMeasureSensitivityAgainst,
+                        function ( iVariableToMeasureSensitivityAgainst ) {
+                           lVariablesMetadata[[iVariableToMeasureSensitivityAgainst]]$cVariableName
                         }
                      ),
                      Correlations = vnCorrelations,
@@ -1344,7 +1344,7 @@ function(input, output, session) {
                   )
 
                   dtSensitivity = dtSensitivity[
-                     order(VarianceContribution)
+                     rev(order(VarianceContribution))
                   ]
 
                   lReactiveValues[[paste0('dtSensitivity', iVariableNumber)]] = dtSensitivity
@@ -1605,12 +1605,19 @@ function(input, output, session) {
 
    }
 
+   #' Return a variable's upstream variables
+   #' If specified, recursively go through all upstream vairables to find
+   #' only the input variables and ignore intermediate output variables
    fGetAllUpstreamVariableNumbers = function (
       iChosenVariableNumber,
       lVariablesMetadata,
-      bRecursive = F
+      bGiveIndependentVariables = T
    ) {
 
+      # Getting the immediate input variables to this particular
+      # variable
+      # ------------------------------------------------------------------------
+      # Getting variable names
       vcUpstreamVariables = sapply(
          lVariablesMetadata,
          function ( lVariableMetadata ) {
@@ -1630,7 +1637,8 @@ function(input, output, session) {
 
       vcUpstreamVariables = unlist(vcUpstreamVariables)
 
-      viVariablesToMeasureSensitivtyAgainst = sapply(
+      # Getting correspoding variable numbers
+      viVariablesToMeasureSensitivityAgainst = sapply(
          lVariablesMetadata,
          function ( lVariableMetadata2 ) {
             
@@ -1647,41 +1655,187 @@ function(input, output, session) {
          }
       )
 
-      viVariablesToMeasureSensitivtyAgainst = unlist(
-         viVariablesToMeasureSensitivtyAgainst
+      viVariablesToMeasureSensitivityAgainst = unlist(
+         viVariablesToMeasureSensitivityAgainst
       )
       
-      viVariablesToMeasureSensitivtyAgainst = unique(
-         viVariablesToMeasureSensitivtyAgainst
+      viVariablesToMeasureSensitivityAgainst = unique(
+         viVariablesToMeasureSensitivityAgainst
       )
 
-      if ( bRecursive == T ) {
+      # Recursing to the raw independent variables
+      # ------------------------------------------------------------------------
+      if ( bGiveIndependentVariables == T ) {
 
-         viVariablesToMeasureSensitivtyAgainst = c(
-            viVariablesToMeasureSensitivtyAgainst,
-            sapply(
-               viVariablesToMeasureSensitivtyAgainst,
-               function ( iVariableToMeasureSensitivtyAgainst ) {
-                  fGetAllUpstreamVariableNumbers(
-                     iChosenVariableNumber = iVariableToMeasureSensitivtyAgainst,
-                     lVariablesMetadata,
-                     bRecursive = bRecursive
-                  )
+         viVariablesToMeasureSensitivityAgainst = sapply(
+            viVariablesToMeasureSensitivityAgainst,
+            function ( iVariableToMeasureSensitivityAgainst ) {
+               
+               viVariableNumber = fGetAllUpstreamVariableNumbers(
+                  iChosenVariableNumber = iVariableToMeasureSensitivityAgainst,
+                  lVariablesMetadata,
+                  bGiveIndependentVariables = bGiveIndependentVariables
+               )
+
+               if ( is.null(viVariableNumber) ) {
+                  viVariableNumber = iVariableToMeasureSensitivityAgainst
                }
-            )
+
+               return ( viVariableNumber )
+            }
          )
+
+         # viVariablesToMeasureSensitivityAgainst = c(
+         #    viVariablesToMeasureSensitivityAgainst,
+         #    sapply(
+         #       viVariablesToMeasureSensitivityAgainst,
+         #       function ( iVariableToMeasureSensitivityAgainst ) {
+         #          fGetAllUpstreamVariableNumbers(
+         #             iChosenVariableNumber = iVariableToMeasureSensitivityAgainst,
+         #             lVariablesMetadata,
+         #             bRecursive = bRecursive
+         #          )
+         #       }
+         #    )
+         # )
 
       }
 
-      viVariablesToMeasureSensitivtyAgainst = unlist(
-         viVariablesToMeasureSensitivtyAgainst
+      viVariablesToMeasureSensitivityAgainst = unlist(
+         viVariablesToMeasureSensitivityAgainst
       )
 
-      viVariablesToMeasureSensitivtyAgainst = unique(
-         viVariablesToMeasureSensitivtyAgainst
+      viVariablesToMeasureSensitivityAgainst = unique(
+         viVariablesToMeasureSensitivityAgainst
       )
 
-      return ( viVariablesToMeasureSensitivtyAgainst )
+      return ( viVariablesToMeasureSensitivityAgainst )
+
+   }
+
+
+   fPrepareVariablesMetadataList = function (
+      iTotalVariables
+   ) {
+
+      lapply(
+         1:iTotalVariables,
+         function( iVariableNumber ) {
+
+            lVariableMetadata = list(
+               iVariableNumber = iVariableNumber,
+               bIsInput = fRetrieveShinyValue(
+                  input = input,
+                  id = "IsInput",
+                  vcSuffixes = iVariableNumber
+               ),
+               cVariableName = fRetrieveShinyValue(
+                  input = input,
+                  id = "VariableName",
+                  vcSuffixes = iVariableNumber
+               ),
+               cVariableDescription = fRetrieveShinyValue(
+                  input = input,
+                  id = 'VariableDescription',
+                  vcSuffixes = iVariableNumber
+               )
+            )
+
+            if ( lVariableMetadata$bIsInput ) {
+
+               lVariableMetadata = append(
+                  lVariableMetadata,
+                  list(
+                     cDistribution = fRetrieveShinyValue(
+                        input = input,
+                        id = 'Distribution',
+                        vcSuffixes = iVariableNumber
+                     ),
+                     nDistributionUpperBound = fRetrieveShinyValue(
+                        input = input,
+                        id = 'DistributionUpperBound',
+                        vcSuffixes = iVariableNumber
+                     ),
+                     nDistributionLowerBound = fRetrieveShinyValue(
+                        input = input,
+                        id = 'DistributionLowerBound',
+                        vcSuffixes = iVariableNumber
+                     ),
+                     iSequence = 1
+                  )
+               )
+
+
+               # Add only the relevant distribution parameters.
+               if ( lVariableMetadata$cDistribution == 'Normal' ) {
+
+                  lVariableMetadata$lParameters = list(
+                     nNormalMean = fRetrieveShinyValue(
+                        input = input,
+                        id = 'NormalMean',
+                        vcSuffixes = iVariableNumber
+                     ),
+                     nNormalSD = fRetrieveShinyValue(
+                        input = input,
+                        id = 'NormalSD',
+                        vcSuffixes = iVariableNumber
+                     )
+                  )
+
+               } else if ( lVariableMetadata$cDistribution == 'Beta' ) {
+
+                  lVariableMetadata$lParameters = list(
+                     nBetaShapeAlpha = fRetrieveShinyValue(
+                        input = input,
+                        id = 'BetaShapeAlpha',
+                        vcSuffixes = iVariableNumber
+                     ),
+                     nBetaShapeBeta = fRetrieveShinyValue(
+                        input = input,
+                        id = 'BetaShapeBeta',
+                        vcSuffixes = iVariableNumber
+                     )
+                  )
+
+               } else if ( lVariableMetadata$cDistribution == 'Constant' ) {
+
+                  lVariableMetadata$lParameters = list(
+                     nConstant = fRetrieveShinyValue(
+                        input = input,
+                        id = 'ConstantValue',
+                        vcSuffixes = iVariableNumber
+                     )
+                  )
+
+               } else if ( lVariableMetadata$cDistribution == 'Empirical' ) {
+
+                  lVariableMetadata$lParameters = list(
+                     cEmpiricalDistributionName = fRetrieveShinyValue(
+                        input = input,
+                        id = 'ChosenEmpiricalDistribution',
+                        vcSuffixes = iVariableNumber
+                     )
+                  )
+
+               }
+
+            } else {
+
+
+               lVariableMetadata$cEquation = fRetrieveShinyValue(
+                  input = input,
+                  id = "textInputEquation",
+                  vcSuffixes = iVariableNumber
+               )
+
+            }
+
+            # Add the parameters needed for new distribution here
+
+            lVariableMetadata
+
+         }
+      )
 
    }
    
@@ -1810,124 +1964,15 @@ function(input, output, session) {
       )
 
       # Prepare the variable meta data list
-      lVariablesMetadata = lapply(
-         1:iTotalVariables,
-         function( iVariableNumber ) {
-
-            lVariableMetadata = list(
-               iVariableNumber = iVariableNumber,
-               bIsInput = fRetrieveShinyValue(
-                  input = input,
-                  id = "IsInput",
-                  vcSuffixes = iVariableNumber
-               ),
-               cVariableName = fRetrieveShinyValue(
-                  input = input,
-                  id = "VariableName",
-                  vcSuffixes = iVariableNumber
-               ),
-               cVariableDescription = fRetrieveShinyValue(
-                  input = input,
-                  id = 'VariableDescription',
-                  vcSuffixes = iVariableNumber
-               )
-            )
-
-            if ( lVariableMetadata$bIsInput ) {
-
-               lVariableMetadata = append(
-                  lVariableMetadata,
-                  list(
-                     cDistribution = fRetrieveShinyValue(
-                        input = input,
-                        id = 'Distribution',
-                        vcSuffixes = iVariableNumber
-                     ),
-                     nDistributionUpperBound = fRetrieveShinyValue(
-                        input = input,
-                        id = 'DistributionUpperBound',
-                        vcSuffixes = iVariableNumber
-                     ),
-                     nDistributionLowerBound = fRetrieveShinyValue(
-                        input = input,
-                        id = 'DistributionLowerBound',
-                        vcSuffixes = iVariableNumber
-                     ),
-                     iSequence = 1
-                  )
-               )
-
-
-               # Add only the relevant distribution parameters.
-               if ( lVariableMetadata$cDistribution == 'Normal' ) {
-
-                  lVariableMetadata$lParameters = list(
-                     nNormalMean = fRetrieveShinyValue(
-                        input = input,
-                        id = 'NormalMean',
-                        vcSuffixes = iVariableNumber
-                     ),
-                     nNormalSD = fRetrieveShinyValue(
-                        input = input,
-                        id = 'NormalSD',
-                        vcSuffixes = iVariableNumber
-                     )
-                  )
-
-               } else if ( lVariableMetadata$cDistribution == 'Beta' ) {
-
-                  lVariableMetadata$lParameters = list(
-                     nBetaShapeAlpha = fRetrieveShinyValue(
-                        input = input,
-                        id = 'BetaShapeAlpha',
-                        vcSuffixes = iVariableNumber
-                     ),
-                     nBetaShapeBeta = fRetrieveShinyValue(
-                        input = input,
-                        id = 'BetaShapeBeta',
-                        vcSuffixes = iVariableNumber
-                     )
-                  )
-
-               } else if ( lVariableMetadata$cDistribution == 'Constant' ) {
-
-                  lVariableMetadata$lParameters = list(
-                     nConstant = fRetrieveShinyValue(
-                        input = input,
-                        id = 'ConstantValue',
-                        vcSuffixes = iVariableNumber
-                     )
-                  )
-
-               } else if ( lVariableMetadata$cDistribution == 'Empirical' ) {
-
-                  lVariableMetadata$lParameters = list(
-                     cEmpiricalDistributionName = fRetrieveShinyValue(
-                        input = input,
-                        id = 'ChosenEmpiricalDistribution',
-                        vcSuffixes = iVariableNumber
-                     )
-                  )
-
-               }
-
-            } else {
-
-
-               lVariableMetadata$cEquation = fRetrieveShinyValue(
-                  input = input,
-                  id = "textInputEquation",
-                  vcSuffixes = iVariableNumber
-               )
-
-            }
-
-            # Add the parameters needed for new distribution here
-
-            lVariableMetadata
-
-         }
+      lVariablesMetadata = fPrepareVariablesMetadataList(
+         iTotalVariables
       )
+
+      fMetaDataToJSONFile(
+         lVariablesMetadata = lVariablesMetadata,
+         cFileName = '/tmp/tmp.json'
+      )
+      
 
       # Trying to figure out what variables are dependent on what other variables
       dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
@@ -2731,52 +2776,60 @@ function(input, output, session) {
 
          }
 
-         # Committing
-         lReactiveValues$lVariablesMetadata = lVariablesMetadata
+         # I remember adding this bit because by not running there would be 
+         # some inconsistency in the background data. I can't remember why now.
+         # Commenting this out since with bigger runs it is painful to wait
+         # for the run to finish before you can start editing, etc
+         if ( F ) {
 
-         cat(
-            file = stderr(),
-            paste(
-               Sys.time(),
-               'fileInputUploadScenario: Evaluating'
+            # Committing
+            lReactiveValues$lVariablesMetadata = lVariablesMetadata
+
+            cat(
+               file = stderr(),
+               paste(
+                  Sys.time(),
+                  'fileInputUploadScenario: Evaluating'
+               )
             )
-         )
 
-         progress$set(
-            message = 'Upload: Evaluating'
-         )
+            progress$set(
+               message = 'Upload: Evaluating'
+            )
 
-         # Evaluating the scenario
-         lReactiveValuesPlaceholder = fEvaluateVariables(
-            iIterations = input$Iterations,
-            lVariablesMetadata,
-            dtAllowedOperations
-         )
+            # Evaluating the scenario
+            lReactiveValuesPlaceholder = fEvaluateVariables(
+               iIterations = input$Iterations,
+               lVariablesMetadata,
+               dtAllowedOperations
+            )
 
-         # save(
-         #    list = 'lVariablesMetadata',
-         #    file = '/tmp/lVariablesMetadata.Rdata'
-         # )
+            # save(
+            #    list = 'lVariablesMetadata',
+            #    file = '/tmp/lVariablesMetadata.Rdata'
+            # )
 
-         if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
+            if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
 
-            lReactiveValues$lMainNotification = lReactiveValuesPlaceholder
-            return ( NULL )
+               lReactiveValues$lMainNotification = lReactiveValuesPlaceholder
+               return ( NULL )
 
+            }
+
+            for ( cName in names(lReactiveValuesPlaceholder) ) {
+               lReactiveValues[[cName]] = lReactiveValuesPlaceholder[[cName]]
+            }
+
+            # Updating other details
+            lReactiveValues$iTotalVariables = length(lVariablesMetadata)
+
+            lReactiveValues$lMainNotification = list(
+               cMessage = 'Run successful!',
+               cType = 'message'
+            )
+            
          }
-
-         for ( cName in names(lReactiveValuesPlaceholder) ) {
-            lReactiveValues[[cName]] = lReactiveValuesPlaceholder[[cName]]
-         }
-
-         # Updating other details
-         lReactiveValues$iTotalVariables = length(lVariablesMetadata)
-
-         lReactiveValues$lMainNotification = list(
-            cMessage = 'Run successful!',
-            cType = 'message'
-         )
-
+         
          lReactiveValues$posixctResetFileInput = Sys.time()
 
       }
@@ -3120,6 +3173,39 @@ function(input, output, session) {
 
       }
    )
+
+   if ( F ) {
+
+      autoInvalidate <- reactiveTimer(2000)
+
+      observe({
+         # Invalidate and re-execute this reactive expression every time the
+         # timer fires.
+         autoInvalidate()
+
+         updateQueryString(paste0('var=',round(runif(1),2)))
+         
+         cat(
+            file = stderr(),
+            getQueryString()
+         )
+
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               paste(sep = "",
+                  "protocol: ", session$clientData$url_protocol, "\n",
+                  "hostname: ", session$clientData$url_hostname, "\n",
+                  "pathname: ", session$clientData$url_pathname, "\n",
+                  "port: ",     session$clientData$url_port,     "\n",
+                  "search: ",   session$clientData$url_search,   "\n"
+               )
+            )
+         )   
+      })
+
+   }
 
 
 }
