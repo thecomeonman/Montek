@@ -1304,10 +1304,13 @@ function(input, output, session) {
                   }
 
 
+                  # Calculating sensitivities
+                  # ------------------------------------------------------------
+
                   viVariablesToMeasureSensitivityAgainst = fGetAllUpstreamVariableNumbers (
                      lVariableMetadata$iVariableNumber,
                      lVariablesMetadata,
-                     bGiveIndependentVariables = T
+                     bGiveIndependentVariables = F
                   )
 
                   # Spearman's correlation
@@ -1671,6 +1674,12 @@ function(input, output, session) {
             viVariablesToMeasureSensitivityAgainst,
             function ( iVariableToMeasureSensitivityAgainst ) {
                
+               # not checking for bIsInput in case the user put rnorm() level
+               # equation in the input. This may not cover it thoroughly since
+               # someone could have done rnorm with a calculated mean but with
+               # a static SD and in that case changing the SD will still 
+               # result in change in tolerance. The best practice is to 
+               # specify the constant in the SD also as a constant input
                viVariableNumber = fGetAllUpstreamVariableNumbers(
                   iChosenVariableNumber = iVariableToMeasureSensitivityAgainst,
                   lVariablesMetadata,
@@ -1901,15 +1910,26 @@ function(input, output, session) {
 
       }
    )
-   
+
+
+   output[['HTMLBestPractices']] <- renderUI(
+      HTML(
+         "<ul>
+         <li>
+         Nothing here yet.
+         </li>
+         </li>
+         </ul>"
+      )
+   )
 
    observeEvent(
-      input$actionButtonHelp, {
+      input$actionButtonBestPractices, {
 
          showModal(
             modalDialog(
-               title = "Help Section",
-               dataTableOutput('dtAllowedOperations'),
+               title = "Best Practices",
+               uiOutput('HTMLBestPractices'),
                easyClose = TRUE,
                footer = NULL
             )
@@ -1917,6 +1937,23 @@ function(input, output, session) {
 
       }
    )
+
+   
+   # Why was this duplicated?
+   # observeEvent(
+   #    input$actionButtonHelp, {
+
+   #       showModal(
+   #          modalDialog(
+   #             title = "Help Section",
+   #             dataTableOutput('dtAllowedOperations'),
+   #             easyClose = TRUE,
+   #             footer = NULL
+   #          )
+   #       )
+
+   #    }
+   # )
    
 
 

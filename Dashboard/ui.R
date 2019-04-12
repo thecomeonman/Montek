@@ -101,6 +101,10 @@ body = dashboardBody(
                      actionButton(
                         inputId = "actionButtonHelp", 
                         label = "Help"
+                     ),
+                     actionButton(
+                        inputId = "actionButtonBestPractices", 
+                        label = "Best Practices"
                      )
                   )
                )
