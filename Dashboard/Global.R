@@ -13,7 +13,9 @@ theme_set(theme_bw(12))
 lArchitectureParms = list()
 
 # Should point to where you've downloaded the repository
-# This is the path used to read other assets like the file needed for dtAllowedOperations
+# eg. if it's "C:/Documents/Rhyhorn" then this should be "C:/Documents"
+# This is the path used to read other assets like the file needed for 
+# dtAllowedOperations
 lArchitectureParms$cRootDirectory = Sys.getenv('AtherGitRepo')
 lArchitectureParms$cRootDirectory = ifelse(
    lArchitectureParms$cRootDirectory == '',
@@ -21,7 +23,9 @@ lArchitectureParms$cRootDirectory = ifelse(
    lArchitectureParms$cRootDirectory
 )
 
-# should point to some location where you want to save the scenarios
+# should point to some location where you want to save the scenarios on your VM
+# this is used in the Cloud saving and loading box. If you're running this only
+# locally then you can ignore this.
 lArchitectureParms$cAtherDataLocation = Sys.getenv('AtherDataLocation')
 lArchitectureParms$cAtherDataLocation = ifelse(
    lArchitectureParms$cAtherDataLocation == '',
@@ -50,18 +54,20 @@ dtAllowedOperations = fread(
 )
 # sorting it in order of longer operators to shorter operators to
 # avoid mix ups with the string parsing
+# Don't edit this.
 dtAllowedOperations = dtAllowedOperations[rev(order(nchar(Operator)))]
 
-# adding radians to the trigo functions to prevent any misunderstanding
-sinradian = sin
-asinradian = asin
-cosradian = cos
-acosradian = acos
-tanradian = tan
-atanradian = atan
+# This is the file to add custome functions in
+# Update operations.csv accordingly
+source(
+   paste0(
+      lArchitectureParms$cRootDirectory,
+      '/Rhyhorn/Metadata/Functions.R'
+   )
+)
 
 # My expectation of a string that will never get encountered in a variable
 # name that is set. If you want to use this character then change this
-# string to anything else you want which you are unlikely to enounter in
-# your variable names.
+# string to something else which you are unlikely to enounter in you
+# variable names.
 cTempVariableString = 'Д'

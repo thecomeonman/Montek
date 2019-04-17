@@ -99,12 +99,12 @@ body = dashboardBody(
                      ),
                      hr(),
                      actionButton(
-                        inputId = "actionButtonHelp", 
-                        label = "Help"
+                        inputId = "actionButtonFunctionHelp", 
+                        label = "Function Guide"
                      ),
                      actionButton(
-                        inputId = "actionButtonBestPractices", 
-                        label = "Best Practices"
+                        inputId = "actionButtonExplanations", 
+                        label = "Explanations"
                      )
                   )
                )
