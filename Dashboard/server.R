@@ -1897,11 +1897,11 @@ function(input, output, session) {
    )
 
    observeEvent(
-      input$actionButtonHelp, {
+      input$actionButtonFunctionHelp, {
 
          showModal(
             modalDialog(
-               title = "Help Section",
+               title = "Function Guide",
                dataTableOutput('dtAllowedOperations'),
                easyClose = TRUE,
                footer = NULL
@@ -1912,24 +1912,33 @@ function(input, output, session) {
    )
 
 
-   output[['HTMLBestPractices']] <- renderUI(
+   output[['HTMLExplanations']] <- renderUI(
       HTML(
          "<ul>
+         
          <li>
-         Nothing here yet.
+         The code is hosted <a href='https://github.com/AtherEnergy/Rhyhorn'>here</a>. The readme has some information.
          </li>
+
+         <li>
+         A bunch of things get configured in Global.R. If you want to change some behaviour, you should look there.
          </li>
+
+         <li>
+         The contribution to variance is an approximation, and is proportional to the square of the correlation between that variable and the output variable.
+         </li>
+
          </ul>"
       )
    )
 
    observeEvent(
-      input$actionButtonBestPractices, {
+      input$actionButtonExplanations, {
 
          showModal(
             modalDialog(
-               title = "Best Practices",
-               uiOutput('HTMLBestPractices'),
+               title = "Explanations",
+               uiOutput('HTMLExplanations'),
                easyClose = TRUE,
                footer = NULL
             )
@@ -1941,7 +1950,7 @@ function(input, output, session) {
    
    # Why was this duplicated?
    # observeEvent(
-   #    input$actionButtonHelp, {
+   #    input$actionButtonFunctionHelp, {
 
    #       showModal(
    #          modalDialog(

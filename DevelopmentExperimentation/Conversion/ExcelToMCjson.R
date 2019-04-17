@@ -61,7 +61,7 @@ fMetaDataToJSONFile = function(
 
 
 dtStackFormulae = fread(
-   paste0('/home/adityakothari/Desktop/MCCSVs/', cFileName)
+   paste0('/home/ask/Desktop/MCCSVs/', cFileName)
 )
 cScenarioFileName = gsub(
    x = cFileName,
@@ -418,5 +418,5 @@ lVariablesMetadata = lapply(
 
 fMetaDataToJSONFile(
    lVariablesMetadata = lVariablesMetadata,
-   cFileName = paste0('/home/adityakothari/Desktop/MCJSONs/', cScenarioFileName)
+   cFileName = paste0('/home/ask/Desktop/MCJSONs/', cScenarioFileName)
 )
