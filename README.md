@@ -36,18 +36,13 @@ to let you run this on your local machine or on a VM. More instructions can be f
 and explanations button in the tool.
 
 #### Running the tool
+
 Opening Dashboard/Global.R in RStudio should cause a Run App button to show up towards the top left. Click that to, well, run the app.
 
 ### Advanced
 
-I recommend using the application so you have some idea of how it works. Some of the terms used in these instructions will be much easier to understand that way.
+You can add your own functions, distributions, and configure various other things.
 
-There are some configurations that can be traced from Global.R.
+I recommend using the application first so you have some idea of how it works. Some of the terms used in these instructions will be much easier to understand that way.
 
-#### Operation Details
-
-`/Metadata/Operations.csv` has four columns: Operator, OperatorString, Usage, and Description. Except for OperatorString, the other three are self explanatory and also get used in the Help button entry. OperatorString is the regex pattern that should be searched for in an output equation to parse it and calculate it correctly.
-
-#### Adding distributions
-
-This section needs better instructions and a simplified process. For now, ctrl+F for `normal` in server.r and add corresponding bits of code for any new distribution you'd like to add.
+Instructions to change configurations can be found in Global.R or the Configuring button in the UI.
