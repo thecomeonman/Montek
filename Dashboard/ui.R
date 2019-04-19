@@ -11,13 +11,22 @@ body = dashboardBody(
                collapsible = T,
                column(
                   width = 2,
-                  h4('Monte Carlo Tool')
+                  HTML('<h4>Rhyhorn</h4>'),
+                  HTML('R-Shiny Based Monte Carlo Simulations'),
+                  HTML('Developed by <a href="https://atherenergy.com", target="_blank">Ather Energy</a>; code <a href="https://github.com/AtherEnergy/Rhyhorn", target="_blank">here</a>')
                ),
                column(
                   width = 2,
                   actionButton(
                      inputId = "actionButtonAddVariable", 
                      label = "Add variable"
+                  )
+               ),
+               column(
+                  width = 2,
+                  actionButton(
+                     inputId = "actionButtonUploadEmpiricalDistributions", 
+                     label = "Empirical distributions"
                   )
                ),
                column(
@@ -78,7 +87,7 @@ body = dashboardBody(
                      hr(),
                      textInput(
                         inputId = 'textInputSaveScenarioOnCloud',
-                        value = 'blahblah.json',
+                        value = 'Scenario.json',
                         label = NULL,
                         placeholder = 'Scenario name on cloud'
                      ),
@@ -94,17 +103,12 @@ body = dashboardBody(
                      title = 'Help',
                      width = 12,
                      actionButton(
-                        inputId = "actionButtonUploadEmpiricalDistributions", 
-                        label = "Empirical distributions"
-                     ),
-                     hr(),
-                     actionButton(
-                        inputId = "actionButtonFunctionHelp", 
-                        label = "Function Guide"
+                        inputId = "actionButtonAppInfo", 
+                        label = "App Information"
                      ),
                      actionButton(
-                        inputId = "actionButtonExplanations", 
-                        label = "Explanations"
+                        inputId = "actionButtonConfiguring", 
+                        label = "Configuring"
                      )
                   )
                )

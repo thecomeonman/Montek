@@ -182,7 +182,13 @@ function(input, output, session) {
                            iVariableNumber
                         ), 
                         label = 'Distribution',
-                        choices = sort(c('Constant','Normal','Uniform','Beta','Empirical')), 
+                        # CopyAndEditForNewDistribution
+                        choices = sort(
+                           c(
+                              'Constant','Normal','Uniform','Beta','Empirical'
+                              #, "NewDistributionName"
+                           )
+                        ), 
                         selected = cDistribution
                      ),
 
@@ -205,7 +211,30 @@ function(input, output, session) {
                         )
                      ),
 
-                     # BEta distribution conditional panel
+                     # CopyAndEditForNewDistribution
+                     # New distribution conditional panel
+                     # conditionalPanel(
+                     #    condition = paste0(
+                     #       'input.Distribution',
+                     #       iVariableNumber,
+                     #       '== "NewDistributionName"'
+                     #    ), 
+                     #    numericInput(
+                     #       inputId = paste0('UIInputNameForParm1', iVariableNumber),
+                     #       label = 'UserFacingNameForParm1',
+                     #       min = 0,
+                     #       value = lParameters$AppBackendNameForParm2
+                     #    ),
+                     #    numericInput(
+                     #       inputId = paste0('UIInputNameForParm2', iVariableNumber),
+                     #       label = 'UserFacingNameForParm2',
+                     #       min = 0,
+                     #       value = lParameters$AppBackendNameForParm2
+                     #    ),
+                     #    ...
+                     # ),
+
+                     # Beta distribution conditional panel
                      conditionalPanel(
                         condition = paste0(
                            'input.Distribution',
@@ -490,7 +519,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'fValidateVariablesMetadata'
+            'fValidateVariablesMetadata\n'
          )
       )
 
@@ -532,7 +561,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfValidateVariablesMetadata: Operators in variable names'
+            'fValidateVariablesMetadata: Operators in variable names\n'
          )
 
       )
@@ -605,7 +634,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfValidateVariablesMetadata: duplicate varibable names'
+            'fValidateVariablesMetadata: duplicate varibable names\n'
          )
 
       )
@@ -639,7 +668,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfValidateVariablesMetadata: invalid equations'
+            'fValidateVariablesMetadata: invalid equations\n'
          )
 
       )
@@ -865,7 +894,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfValidateVariablesMetadata: missing equations'
+            'fValidateVariablesMetadata: missing equations\n'
          )
 
       )
@@ -924,7 +953,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfValidateVariablesMetadata: what is this exactly?'
+            'fValidateVariablesMetadata: what is this exactly?\n'
          )
 
       )
@@ -1077,7 +1106,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            '\nfEvaluateVariables:'
+            'fEvaluateVariables:\n'
          )
       )
 
@@ -1125,9 +1154,10 @@ function(input, output, session) {
                   file = stderr(),
                   paste(
                      Sys.time(),
-                     '\nfEvaluateVariables:',
+                     'fEvaluateVariables:',
                      lVariableMetadata$iVariableNumber,
-                     lVariableMetadata$cVariableName
+                     lVariableMetadata$cVariableName,
+                     '\n'
                   )
                )
 
@@ -1145,9 +1175,16 @@ function(input, output, session) {
 
                   repeat {
 
+                     # CopyAndEditForNewDistribution
                      # Add logic for new distributions here
                      vnIntermediateDistribution = switch(
                         cDistribution,
+                        # NewDistributionName = FunctionForNewDistribution(
+                        #    n = iIterations,
+                        #    parm1 = lParameters$AppBackendNameForParm1, 
+                        #    parm2 = lParameters$AppBackendNameForParm2, 
+                        #    ...
+                        # ),
                         Normal = rnorm(
                            n = iIterations,
                            mean = lParameters$nNormalMean,
@@ -1514,7 +1551,8 @@ function(input, output, session) {
                paste(
                   Sys.time(),
                   '\nfOrderOfEvaluation:',
-                  lVariableMetadata$cVariableName
+                  lVariableMetadata$cVariableName,
+                  '\n'
                )
 
             )
@@ -1775,6 +1813,7 @@ function(input, output, session) {
                )
 
 
+               # CopyAndEditForNewDistribution
                # Add only the relevant distribution parameters.
                if ( lVariableMetadata$cDistribution == 'Normal' ) {
 
@@ -1790,6 +1829,22 @@ function(input, output, session) {
                         vcSuffixes = iVariableNumber
                      )
                   )
+
+               # } else if ( lVariableMetadata$cDistribution == "NewDistributionName" ) {
+
+               #    lVariableMetadata$lParameters = list(
+               #       AppBackendNameForParm1 = fRetrieveShinyValue(
+               #          input = input,
+               #          id = 'UIInputNameForParm1',
+               #          vcSuffixes = iVariableNumber
+               #       ),
+               #       AppBackendNameForParm2 = fRetrieveShinyValue(
+               #          input = input,
+               #          id = 'UIInputNameForParm2',
+               #          vcSuffixes = iVariableNumber
+               #       ),
+               #       ...
+               #    )
 
                } else if ( lVariableMetadata$cDistribution == 'Beta' ) {
 
@@ -1897,12 +1952,15 @@ function(input, output, session) {
    )
 
    observeEvent(
-      input$actionButtonFunctionHelp, {
+      input$actionButtonAppInfo, {
 
          showModal(
             modalDialog(
-               title = "Function Guide",
+               title = "User Help",
+               HTML('<h4>Function guide:</h4>'),
                dataTableOutput('dtAllowedOperations'),
+               hr(),
+               uiOutput('OtherInformation'),
                easyClose = TRUE,
                footer = NULL
             )
@@ -1912,33 +1970,54 @@ function(input, output, session) {
    )
 
 
-   output[['HTMLExplanations']] <- renderUI(
+   output[['OtherInformation']] <- renderUI(
       HTML(
-         "<ul>
+         "
+         <h4>Empirical Distributions:</h4>
+         You can upload a table and all columns will be offered as an empirical distribution. For the implementation, each iteration randomly samples a value from the raw data of the selected distribution.
+         
+         <hr>
+
+         <h4>Sensitivity:</h4>
+         The contribution to variance is an approximation, and is proportional to the square of the correlation between that variable and the output variable.
+         "
+      )
+   )
+   output[['HTMLConfiguring']] <- renderUI(
+      HTML(
+         "
+         <ul>
          
          <li>
-         The code is hosted <a href='https://github.com/AtherEnergy/Rhyhorn'>here</a>. The readme has some information.
+         The code is hosted <a href='https://github.com/AtherEnergy/Rhyhorn' target='_blank'>here</a>. The readme has some information which may be of use.
          </li>
 
          <li>
-         A bunch of things get configured in Global.R. If you want to change some behaviour, you should look there.
+         A bunch of things get configured in Global.R. If you want to change some behaviour, you should start looking from there.
+
+         <ul>
+         <li>
+         Addition of new functions is modularised and instructions can be found in Global.R.
          </li>
 
          <li>
-         The contribution to variance is an approximation, and is proportional to the square of the correlation between that variable and the output variable.
+         Addition of distributions is not yet modularised. As a workaround, ctrl+F for `CopyAndEditForNewDistribution` in server.r and add corresponding bits of code for any new distribution you'd like to add.
          </li>
 
-         </ul>"
+         </ul>
+         </li>
+         </ul>
+         "
       )
    )
 
    observeEvent(
-      input$actionButtonExplanations, {
+      input$actionButtonConfiguring, {
 
          showModal(
             modalDialog(
-               title = "Explanations",
-               uiOutput('HTMLExplanations'),
+               title = "Configuring The App",
+               uiOutput('HTMLConfiguring'),
                easyClose = TRUE,
                footer = NULL
             )
@@ -1950,7 +2029,7 @@ function(input, output, session) {
    
    # Why was this duplicated?
    # observeEvent(
-   #    input$actionButtonFunctionHelp, {
+   #    input$actionButtonAppInfo, {
 
    #       showModal(
    #          modalDialog(
@@ -1974,7 +2053,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'actionButtonRun initiated'
+            'actionButtonRun initiated\n'
          )
 
       )
@@ -2000,7 +2079,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'actionButtonRun: Retrieving metadata'
+            'actionButtonRun: Retrieving metadata\n'
          )
 
       )
@@ -2031,7 +2110,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'actionButtonRun: Basic checks'
+            'actionButtonRun: Basic checks\n'
          )
 
       )
@@ -2060,7 +2139,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'actionButtonRun: Evaluating'
+            'actionButtonRun: Evaluating\n'
          )
       )
 
@@ -2313,7 +2392,7 @@ function(input, output, session) {
             file = stderr(),
             paste(
                Sys.time(),
-               'actionButtonAddVariable'
+               'actionButtonAddVariable\n'
             )
          )
 
@@ -2360,71 +2439,78 @@ function(input, output, session) {
 
          lVariablesMetadata = isolate(lReactiveValues$lVariablesMetadata)
 
-         dtLaidoutSummary = rbindlist(
-            lapply(
-               lVariablesMetadata,
-               function( lVariableMetadata ) {
-                  
-                  dtReturn = data.table(
-                     VariableName = lVariableMetadata$cVariableName
-                  )
-                  
-               
-                  if ( !is.null(lVariableMetadata$cEquation) ) {
+         if ( !is.null(lVariablesMetadata) ) {
+
+            dtLaidoutSummary = rbindlist(
+               lapply(
+                  lVariablesMetadata,
+                  function( lVariableMetadata ) {
                      
-                     cContent = lVariableMetadata$cEquation
-                     
-                  } else {
-                     
-                     cContent = paste0(
-                        c(
-                           lVariableMetadata$cDistribution,
-                           paste0('[',lVariableMetadata$nDistributionUpperBound,',',lVariableMetadata$nDistributionLowerBound,']'),
-                           sapply(
-                              seq(length(lVariableMetadata$lParameters)),
-                              function( iParmIndex ) {
-                                 paste0(names(lVariableMetadata$lParameters)[iParmIndex], ':', lVariableMetadata$lParameters[iParmIndex] ) 
-                              }
-                           )
-                        ),
-                        collapse = '<br>'
+                     dtReturn = data.table(
+                        VariableName = lVariableMetadata$cVariableName
                      )
                      
-                     lVariableMetadata$cEquation
+                  
+                     if ( !is.null(lVariableMetadata$cEquation) ) {
+                        
+                        cContent = lVariableMetadata$cEquation
+                        
+                     } else {
+                        
+                        cContent = paste0(
+                           c(
+                              lVariableMetadata$cDistribution,
+                              paste0('[',lVariableMetadata$nDistributionUpperBound,',',lVariableMetadata$nDistributionLowerBound,']'),
+                              sapply(
+                                 seq(length(lVariableMetadata$lParameters)),
+                                 function( iParmIndex ) {
+                                    paste0(names(lVariableMetadata$lParameters)[iParmIndex], ':', lVariableMetadata$lParameters[iParmIndex] ) 
+                                 }
+                              )
+                           ),
+                           collapse = '<br>'
+                        )
+                        
+                        lVariableMetadata$cEquation
+                        
+                     }
+                     
+                     dtReturn[, Content := cContent]
                      
                   }
-                  
-                  dtReturn[, Content := cContent]
-                  
-               }
+               )
             )
-         )
 
-         dtLaidoutSummary[,
-           Variable := VariableName
-         ]
+            dtLaidoutSummary[,
+            Variable := VariableName
+            ]
 
-         dtLaidoutSummary[,
-           Type := ''
-         ]
+            dtLaidoutSummary[,
+            Type := ''
+            ]
 
-         dtLaidoutSummary[
-            grepl(x = VariableName, pattern = '_'), 
-            Variable := paste(rev(rev(unlist(strsplit(VariableName, '_')))[-1]), collapse = '_'), 
-            VariableName
-         ]
+            dtLaidoutSummary[
+               grepl(x = VariableName, pattern = '_'), 
+               Variable := paste(rev(rev(unlist(strsplit(VariableName, '_')))[-1]), collapse = '_'), 
+               VariableName
+            ]
 
-         dtLaidoutSummary[
-            grepl(x = VariableName, pattern = '_'), 
-            Type := rev(unlist(strsplit(VariableName, '_')))[1], 
-            VariableName
-         ]
+            dtLaidoutSummary[
+               grepl(x = VariableName, pattern = '_'), 
+               Type := rev(unlist(strsplit(VariableName, '_')))[1], 
+               VariableName
+            ]
 
-         dtLaidoutSummary = dcast(
-            dtLaidoutSummary, 
-            Type ~ Variable, 
-            value.var = 'Content'
-         )
+            dtLaidoutSummary = dcast(
+               dtLaidoutSummary, 
+               Type ~ Variable, 
+               value.var = 'Content'
+            )
+
+         } else {
+
+            dtLaidoutSummary = data.table()
+         }
 
          dtLaidoutSummary
 
@@ -2614,7 +2700,7 @@ function(input, output, session) {
             file = stderr(),
             paste(
                Sys.time(),
-               'Uploading a scenario'
+               'Uploading a scenario\n'
             )
          )
 
@@ -2650,7 +2736,7 @@ function(input, output, session) {
                   file = stderr(),
                   paste(
                      Sys.time(),
-                     'fileInputUploadScenario: Basic checks'
+                     'fileInputUploadScenario: Basic checks\n'
                   )
 
                )
@@ -2682,7 +2768,7 @@ function(input, output, session) {
                   file = stderr(),
                   paste(
                      Sys.time(),
-                     'fileInputUploadScenario: Order of evaluation'
+                     'fileInputUploadScenario: Order of evaluation\n'
                   )
 
                )
@@ -2695,7 +2781,7 @@ function(input, output, session) {
                   file = stderr(),
                   paste(
                      Sys.time(),
-                     'fileInputUploadScenario: Validating variable metadata'
+                     'fileInputUploadScenario: Validating variable metadata\n'
                   )
 
                )
@@ -2835,7 +2921,7 @@ function(input, output, session) {
                file = stderr(),
                paste(
                   Sys.time(),
-                  'fileInputUploadScenario: Evaluating'
+                  'fileInputUploadScenario: Evaluating\n'
                )
             )
 
@@ -2899,7 +2985,7 @@ function(input, output, session) {
             file = stderr(),
             paste(
                Sys.time(),
-               'Adding empirical distributions'
+               'Adding empirical distributions\n'
             )
          )
 
@@ -3062,7 +3148,7 @@ function(input, output, session) {
             file = stderr(),
             paste(
                Sys.time(),
-               'actionButtonUploadEmpiricalDistributions'
+               'actionButtonUploadEmpiricalDistributions\n'
             )
          )
 

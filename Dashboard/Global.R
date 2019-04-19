@@ -44,7 +44,11 @@ iRandomlyLargeNumberForVariables = 99
 # efficient.
 iRandomlyLargeNumberForEmpirical = 99
 
-# The operations that a user is allowed
+# The operations that a user is allowed. It has four columns: 
+# Operator, OperatorString, Usage, and Description. Except for OperatorString, 
+# the other three are self explanatory and also get used in the Help button 
+# entry. OperatorString is the regex pattern that should be searched for in 
+# an output equation to parse it and calculate it correctly.
 dtAllowedOperations = fread(
    paste0(
       lArchitectureParms$cRootDirectory,
@@ -57,7 +61,7 @@ dtAllowedOperations = fread(
 # Don't edit this.
 dtAllowedOperations = dtAllowedOperations[rev(order(nchar(Operator)))]
 
-# This is the file to add custome functions in
+# This is the file to add custom functions that the user is allowed
 # Update operations.csv accordingly
 source(
    paste0(
