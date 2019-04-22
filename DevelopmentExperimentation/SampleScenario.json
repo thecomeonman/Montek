@@ -1,0 +1,32 @@
+[
+{"iVariableNumber":1,
+	"bIsInput":true,
+	"cVariableName":"a",
+	"cVariableDescription":"",
+	"cDistribution":"Normal",
+	"nDistributionUpperBound":0,
+	"nDistributionLowerBound":0,
+	"iSequence":1,
+	"lParameters":{"nNormalMean":0,
+	"nNormalSD":1}}
+,
+{"iVariableNumber":2,
+	"bIsInput":true,
+	"cVariableName":"b",
+	"cVariableDescription":"",
+	"cDistribution":"Normal",
+	"nDistributionUpperBound":0,
+	"nDistributionLowerBound":0,
+	"iSequence":1,
+	"lParameters":{"nNormalMean":0,
+	"nNormalSD":5}}
+,
+{"iVariableNumber":3,
+	"bIsInput":false,
+	"cVariableName":"c",
+	"cVariableDescription":"",
+	"cEquation":"a + b",
+	"vcUpstreamVariables":["a",
+	"b"],
+	"iSequence":2}
+]

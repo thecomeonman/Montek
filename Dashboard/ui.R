@@ -103,6 +103,10 @@ body = dashboardBody(
                      title = 'Help',
                      width = 12,
                      actionButton(
+                        inputId = "actionButtonAppFunctionality", 
+                        label = "App Functionality"
+                     ),
+                     actionButton(
                         inputId = "actionButtonAppInfo", 
                         label = "App Information"
                      ),

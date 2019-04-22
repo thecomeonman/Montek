@@ -1970,6 +1970,22 @@ function(input, output, session) {
    )
 
 
+   observeEvent(
+      input$actionButtonAppFunctionality, {
+
+         showModal(
+            modalDialog(
+               title = "User Help",
+               uiOutput('AppFunctionality'),
+               easyClose = TRUE,
+               footer = NULL
+            )
+         )
+
+      }
+   )
+
+
    output[['OtherInformation']] <- renderUI(
       HTML(
          "
@@ -1983,9 +1999,33 @@ function(input, output, session) {
          "
       )
    )
-   output[['HTMLConfiguring']] <- renderUI(
+   
+
+   output[['AppFunctionality']] <- renderUI(
       HTML(
          "
+
+         <h4>Getting started</h4>
+         You need the Add Variable button, the iterations setting, and the run button.
+
+         <h4>Saving your scenarios</h4>
+         You can save, reload your scenarios on your local machine from the browse and download buttons in the box titled Local Machine.
+         You can save, reload your scenarios on a virtual machine from the load and save buttons in the box titled Cloud. Someone will have to setup the virtual machine and configure certain things in the app accordingly.
+         There is a sample scenario at DevelopmentExperimentation/SampleScenario.json for you to explore.
+
+         <h4>Summary Button</h4>
+         A summary of the run, various percentiles, mean, median, etc. is presented in a tabular form.
+
+         <h4>Managing the space on your screen</h4>
+         Look for the - or + sign towards the corner of various boxes. This means they are collapsible or expandible and will let you better manage your screen real estate.
+
+         "
+      )
+   )
+   
+   output[['HTMLConfiguring']] <- renderUI(
+      HTML(
+         paste0("
          <ul>
          
          <li>
@@ -2006,8 +2046,22 @@ function(input, output, session) {
 
          </ul>
          </li>
+
+         <li>
+         To configure this app to run on a virtual machine, in addition to the instructions to run on your local machine, you will need to configure R and Shiny server on your virtual machine and point `lArchitectureParms$cAtherDataLocation` to a location on your virtual machine.
+         </li>
+
+
+         <li>
+         The number of variables and empirical distributions allowed is configured in Global.R. This can be changed.
+         </li>
+
+         <li>
+         If you use the string ", cTempVariableString," anywhere in your variables names, then you should modify the variable cTempVariableString in Global.R to a different string that you won't use.
+         </li>
+
          </ul>
-         "
+         ")
       )
    )
 
