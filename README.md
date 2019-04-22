@@ -32,12 +32,13 @@ Open Rstudio and run the following command in the console -
 `install.packages(c('shiny','shinydashboard','DT','ggplot2','scales','data.table','rjson'))`
 
 The file Dashboard/Global.R  has a bunch of parameters. The only one you NEED to modify to get started is `lArchitectureParms$cRootDirectory`. The others can be left as they are. This should be enough
-to let you run this on your local machine or on a VM. More instructions can be found in the help
-and explanations button in the tool.
+to let you run this on your local machine. More instructions can be found in the Configuring button in the tool.
 
 #### Running the tool
 
 Opening Dashboard/Global.R in RStudio should cause a Run App button to show up towards the top left. Click that to, well, run the app.
+
+The App Functionality button will tell you about the basic features. The App Information button will tell you some details about the functionality.
 
 ### Advanced
 
