@@ -1302,6 +1302,8 @@ function(input, output, session) {
                         break
 
                      }
+                     
+                  }
 
                # output variable evaluation logic
                } else {
