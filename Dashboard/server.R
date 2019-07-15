@@ -677,10 +677,10 @@ function(input, output, session) {
       dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
       
-      save(
-         list = c('lVariablesMetadata','dtVariableNameMapping','dtAllowedOperations'),
-         file = '~/Desktop/MCFormulation.Rdata'
-      )
+      # save(
+      #    list = c('lVariablesMetadata','dtVariableNameMapping','dtAllowedOperations'),
+      #    file = '~/Desktop/MCFormulation.Rdata'
+      # )
       
       vcNotification = sapply(
          lVariablesMetadata,
@@ -701,8 +701,8 @@ function(input, output, session) {
             cEquationWithOnlyCoefficients = lVariableMetadata$cEquation
             vcUpstreamVariables = c()
             
-            print(700)
-            print(cEquation)
+            # print(700)
+            # print(cEquation)
             
             for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
@@ -720,8 +720,8 @@ function(input, output, session) {
                      split = dtVariableNameMapping[iRow, VariableName]
                   ))
                   
-                  print(710)
-                  print(cEquation)
+                  # print(710)
+                  # print(cEquation)
 
                }
 
@@ -742,8 +742,8 @@ function(input, output, session) {
             }
 
             
-            print(727)
-            print(cEquation)
+            # print(727)
+            # print(cEquation)
             
             cEquation = paste(
                cEquation,
@@ -769,8 +769,8 @@ function(input, output, session) {
 
                   if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
 
-                     print(744)
-                     print(cEquation)
+                     # print(744)
+                     # print(cEquation)
                      
                      cEquation = gsub(
                         x = cEquation,
@@ -852,8 +852,8 @@ function(input, output, session) {
                      #    collapse = ''
                      # )
                      
-                     print(825)
-                     print(cEquation)
+                     # print(825)
+                     # print(cEquation)
         
                   }  
 
@@ -885,9 +885,9 @@ function(input, output, session) {
 
             }
             
-            print('Final')
-            print(cEquationWithOnlyCoefficients)
-            print(cEquation)
+            # print('Final')
+            # print(cEquationWithOnlyCoefficients)
+            # print(cEquation)
 
             if ( length(cEquation) > 0) {
 
@@ -1296,13 +1296,18 @@ function(input, output, session) {
 
                      }
 
-                  }
+                     if ( length(vnDistribution) >=  iIterations ) {
+
+                        vnDistribution = vnDistribution[1:iIterations]
+                        break
+
+                     }
 
                # output variable evaluation logic
                } else {
 
-                  print(str(lVariableMetadata))
-                  print('~~~~~~~~~~~~~~~')
+                  # print(str(lVariableMetadata))
+                  # print('~~~~~~~~~~~~~~~')
 
                   cEquation = lVariableMetadata$cEquation
 
