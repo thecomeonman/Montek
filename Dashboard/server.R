@@ -677,7 +677,11 @@ function(input, output, session) {
       dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
       
-
+      save(
+         list = c('lVariablesMetadata','dtVariableNameMapping','dtAllowedOperations'),
+         file = '~/Desktop/MCFormulation.Rdata'
+      )
+      
       vcNotification = sapply(
          lVariablesMetadata,
          function(lVariableMetadata) {
@@ -694,16 +698,30 @@ function(input, output, session) {
 
             # Removing operators
             cEquation = lVariableMetadata$cEquation
+            cEquationWithOnlyCoefficients = lVariableMetadata$cEquation
             vcUpstreamVariables = c()
-
+            
+            print(700)
+            print(cEquation)
+            
             for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
                if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
+                  
+                  cEquationWithOnlyCoefficients = strsplit(
+                     cEquationWithOnlyCoefficients,
+                     dtVariableNameMapping[iRow, VariableName]
+                  )
+                  
+                  cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
 
                   cEquation = unlist(strsplit(
                      x = as.character(cEquation),
                      split = dtVariableNameMapping[iRow, VariableName]
                   ))
+                  
+                  print(710)
+                  print(cEquation)
 
                }
 
@@ -716,18 +734,34 @@ function(input, output, session) {
                   split = cPattern
                ))
 
+               cEquationWithOnlyCoefficients = unlist(strsplit(
+                  x = as.character(cEquationWithOnlyCoefficients),
+                  split = cPattern
+               ))
 
             }
 
+            
+            print(727)
+            print(cEquation)
+            
             cEquation = paste(
                cEquation,
                collapse = ''
             )
+            
 
             # check if functions have the mandatory arguments or not
             for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
 
                cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
+               
+               cEquationWithOnlyCoefficients = strsplit(
+                  cEquationWithOnlyCoefficients,
+                  cOperatorString
+               )
+               
+               cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
 
                if ( !cOperatorString %in% c('(',')') ) {
 
@@ -735,6 +769,9 @@ function(input, output, session) {
 
                   if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
 
+                     print(744)
+                     print(cEquation)
+                     
                      cEquation = gsub(
                         x = cEquation,
                         pattern = cOperatorString,
@@ -810,10 +847,13 @@ function(input, output, session) {
 
                      }
 
-                     cEquation = paste(
-                        cEquation,
-                        collapse = ''
-                     )
+                     # cEquation = paste(
+                     #    cEquation,
+                     #    collapse = ''
+                     # )
+                     
+                     print(825)
+                     print(cEquation)
         
                   }  
 
@@ -844,12 +884,19 @@ function(input, output, session) {
                )
 
             }
+            
+            print('Final')
+            print(cEquationWithOnlyCoefficients)
+            print(cEquation)
 
             if ( length(cEquation) > 0) {
 
                if ( any(nchar(cEquation) > 0) ) {
 
-                  if ( any(is.na(as.numeric(unlist(cEquation[sapply(cEquation, nchar)>0])))) ) {
+                  if ( 
+                     any(is.na(as.numeric(unlist(cEquationWithOnlyCoefficients[sapply(cEquationWithOnlyCoefficients, nchar)>0])))) |
+                     paste(cEquationWithOnlyCoefficients, collapse = '' ) != cEquation
+                  ) {
 
                      cReturn = paste0(
                         lVariableMetadata$cVariableName,
