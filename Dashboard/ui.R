@@ -72,31 +72,31 @@ body = dashboardBody(
                      )
                   )
                ),
-               column(
-                  width = 4,
-                  box(
-                     title = 'Cloud',
-                     width = 12,
-                     selectizeInput(
-                        inputId = 'selectizeInputLoadScenarioFromCloud', 
-                        label = 'Load', 
-                        choices = c(), 
-                        selected = c(), 
-                        multiple = F
-                     ),
-                     hr(),
-                     textInput(
-                        inputId = 'textInputSaveScenarioOnCloud',
-                        value = 'Scenario.json',
-                        label = NULL,
-                        placeholder = 'Scenario name on cloud'
-                     ),
-                     actionButton(
-                        inputId = "actionButtonSaveScenarioOnCloud", 
-                        label = "Save"
-                     )
-                  )
-               ),
+               # column(
+               #    width = 4,
+               #    box(
+               #       title = 'Cloud',
+               #       width = 12,
+               #       selectizeInput(
+               #          inputId = 'selectizeInputLoadScenarioFromCloud', 
+               #          label = 'Load', 
+               #          choices = c(), 
+               #          selected = c(), 
+               #          multiple = F
+               #       ),
+               #       hr(),
+               #       textInput(
+               #          inputId = 'textInputSaveScenarioOnCloud',
+               #          value = 'Scenario.json',
+               #          label = NULL,
+               #          placeholder = 'Scenario name on cloud'
+               #       ),
+               #       actionButton(
+               #          inputId = "actionButtonSaveScenarioOnCloud", 
+               #          label = "Save"
+               #       )
+               #    )
+               # ),
                column(
                   width = 4,
                   box(
