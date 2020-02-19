@@ -514,7 +514,6 @@ function(input, output, session) {
       dtAllowedOperations
    ) {
 
-
       cat(
          file = stderr(),
          paste(
@@ -703,7 +702,22 @@ function(input, output, session) {
             
             # print(700)
             # print(cEquation)
+
+            cEquation = gsub(
+               cEquation,
+               pattern = '\\t|\\n',
+               replacement = ''
+            )
+
+            cEquationWithOnlyCoefficients = gsub(
+               cEquationWithOnlyCoefficients,
+               pattern = '\\t|\\n',
+               replacement = ''
+            )
             
+            # print(700.5)
+            # print(cEquation)
+
             for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
                if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
@@ -719,6 +733,11 @@ function(input, output, session) {
                      x = as.character(cEquation),
                      split = dtVariableNameMapping[iRow, VariableName]
                   ))
+
+                  if ( length(cEquation) == 0 ) {
+                     cEquation = ''
+                     cEquationWithOnlyCoefficients = ''
+                  }
                   
                   # print(710)
                   # print(cEquation)
@@ -729,15 +748,28 @@ function(input, output, session) {
 
             for ( cPattern in c(' ', ',') ) {
 
+               # print(715)
+               # print(cEquation)
+
                cEquation = unlist(strsplit(
                   x = as.character(cEquation),
                   split = cPattern
                ))
 
+               # print(cEquation)
+
                cEquationWithOnlyCoefficients = unlist(strsplit(
                   x = as.character(cEquationWithOnlyCoefficients),
                   split = cPattern
                ))
+
+               # print(cEquationWithOnlyCoefficients)
+
+               if ( length(cEquation) == 0 ) {
+                  cEquation = ''
+                  cEquationWithOnlyCoefficients = ''
+               }
+
 
             }
 
@@ -754,6 +786,7 @@ function(input, output, session) {
             # check if functions have the mandatory arguments or not
             for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
 
+
                cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
                
                cEquationWithOnlyCoefficients = strsplit(
@@ -762,6 +795,11 @@ function(input, output, session) {
                )
                
                cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
+
+               # if it's a purely variable and functions based equation with no coefficients
+               # then strsplit makes it null or character(0) which messes with the next 
+               # iteration. Adding a harmless "" to prevent it.
+               cEquationWithOnlyCoefficients = paste0(cEquationWithOnlyCoefficients, '')
 
                if ( !cOperatorString %in% c('(',')') ) {
 
@@ -2849,7 +2887,7 @@ function(input, output, session) {
 
                )
 
-               lVariablesMetadata = fromJSON(paste(lVariablesMetadata, collapse = ''))
+               lVariablesMetadata = rjson::fromJSON(paste(lVariablesMetadata, collapse = ''))
 
                # initialising the other metadata ( which is optional )
                lVariablesMetadata = lapply(
@@ -2913,7 +2951,7 @@ function(input, output, session) {
             },
             error = function(e) {
 
-
+               # print(e)
                showModal(
                   modalDialog(
                      title = "Error!",
