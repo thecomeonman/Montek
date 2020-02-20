@@ -1,6 +1,9 @@
 
 function(input, output, session) {
 
+   bLoadGUI = F
+   bLoadCorrelations = F
+
    #' Function to generate uniform distribution
    #' @param iIterations The number of values to generate
    #' @param nLowerBound The lower limit of values to look at
@@ -1442,44 +1445,49 @@ function(input, output, session) {
                      bGiveIndependentVariables = F
                   )
 
-                  # Spearman's correlation
-                  vnCorrelations = sapply(
-                     # dtVariableDetails[Input == T, VariableName],
-                     viVariablesToMeasureSensitivityAgainst,
-                     function ( iVariableToMeasureSensitivityAgainst ) {
+                  if ( bLoadCorrelations ) {
 
-                        cor(
-                           get(
-                              paste0(
-                                 'Variable', 
-                                 iVariableToMeasureSensitivityAgainst
-                              )
-                           ),
-                           vnDistribution
-                        )
-                        
-                     }
-                  )
-
-                  # This is what Crystal Ball is doing as contribution to variance :|
-                  # https://docs.oracle.com/cd/E12825_01/epm.111/cb_user/frameset.htm?ch07s04s03.html
-
-                  dtSensitivity = data.table(
-                     VariableName = sapply(
+                     # Spearman's correlation
+                     vnCorrelations = sapply(
+                        # dtVariableDetails[Input == T, VariableName],
                         viVariablesToMeasureSensitivityAgainst,
                         function ( iVariableToMeasureSensitivityAgainst ) {
-                           lVariablesMetadata[[iVariableToMeasureSensitivityAgainst]]$cVariableName
+
+                           cor(
+                              get(
+                                 paste0(
+                                    'Variable', 
+                                    iVariableToMeasureSensitivityAgainst
+                                 )
+                              ),
+                              vnDistribution
+                           )
+                           
                         }
-                     ),
-                     Correlations = vnCorrelations,
-                     VarianceContribution = vnCorrelations^2 / sum(vnCorrelations^2, na.rm = T)
-                  )
+                     )
 
-                  dtSensitivity = dtSensitivity[
-                     rev(order(VarianceContribution))
-                  ]
+                     # This is what Crystal Ball is doing as contribution to variance :|
+                     # https://docs.oracle.com/cd/E12825_01/epm.111/cb_user/frameset.htm?ch07s04s03.html
 
-                  lReactiveValues[[paste0('dtSensitivity', iVariableNumber)]] = dtSensitivity
+                     dtSensitivity = data.table(
+                        VariableName = sapply(
+                           viVariablesToMeasureSensitivityAgainst,
+                           function ( iVariableToMeasureSensitivityAgainst ) {
+                              lVariablesMetadata[[iVariableToMeasureSensitivityAgainst]]$cVariableName
+                           }
+                        ),
+                        Correlations = vnCorrelations,
+                        VarianceContribution = vnCorrelations^2 / sum(vnCorrelations^2, na.rm = T)
+                     )
+
+                     dtSensitivity = dtSensitivity[
+                        rev(order(VarianceContribution))
+                     ]
+
+                     lReactiveValues[[paste0('dtSensitivity', iVariableNumber)]] = dtSensitivity
+
+                  }
+
 
                }
 
@@ -1994,7 +2002,6 @@ function(input, output, session) {
       )
 
    }
-   
 
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
@@ -2322,155 +2329,161 @@ function(input, output, session) {
 
    # Since variable are being added, we need to dynamically handle them
    # https://gist.github.com/wch/5436415/
-   for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
+   if ( bLoadGUI ) {
+      
+      for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
 
-      local({
+         local({
 
-         iLocalVariableNumber = iVariableNumber
-
-
-         # VariableDistributionChartPDF
-         output[[paste0('VariableDistributionChartPDF', iLocalVariableNumber)]] = renderPlot({
-
-            dtDistribution = lReactiveValues[[paste0('dtDistribution', iLocalVariableNumber)]]
-
-            if ( is.null(dtDistribution) ) {
-
-               return ( NULL )
-
-            }
-
-            ggplot() +
-               geom_line(
-                  data = dtDistribution,
-                  aes(
-                     x = Values,
-                     y = PDF
-                  )
-               ) +
-               geom_point(
-                  data = dtDistribution,
-                  aes(
-                     x = Values,
-                     y = PDF
-                  )
-               ) +
-               scale_y_continuous(label = percent, name = 'PDF') +
-               xlab(NULL) +
-               ggtitle(
-                  fRetrieveShinyValue(
-                     input = input,
-                     id = 'VariableName',
-                     vcSuffixes = iLocalVariableNumber
-                  )
-               )
-
-         })
+            iLocalVariableNumber = iVariableNumber
 
 
-
-         # DistributionChartCDF
-         output[[paste0('DistributionChartCDF', iLocalVariableNumber)]] = renderPlot({
-            
-            dtDistribution = lReactiveValues[[paste0('dtDistribution', iLocalVariableNumber)]]
-
-            if ( is.null(dtDistribution) ) {
-
-               return ( NULL )
-               
-            }
-
-            ggplot() +
-               geom_point(
-                  data = dtDistribution,
-                  aes(
-                     x = Values,
-                     y = CDF
-                  )
-               ) +
-               geom_line(
-                  data = dtDistribution,
-                  aes(
-                     x = Values,
-                     y = CDF
-                  )
-               ) +
-               scale_y_continuous(label = percent, name = 'CDF') +
-               xlab(NULL) +
-               ggtitle(
-                  fRetrieveShinyValue(
-                     input = input,
-                     id = 'VariableName',
-                     vcSuffixes = iLocalVariableNumber
-                  )
-               )
-
-         })
-
-
-         # DistributionDetails
-         output[[paste0('DistributionDetails', iLocalVariableNumber)]] = renderDataTable(
-            {
+            # VariableDistributionChartPDF
+            output[[paste0('VariableDistributionChartPDF', iLocalVariableNumber)]] = renderPlot({
 
                dtDistribution = lReactiveValues[[paste0('dtDistribution', iLocalVariableNumber)]]
 
-               if ( is.null(dtDistribution) ) return ( NULL )
+               if ( is.null(dtDistribution) ) {
 
-               dtDistribution[, list(Values, PDF, CDF)]
+                  return ( NULL )
+
+               }
+
+               ggplot() +
+                  geom_line(
+                     data = dtDistribution,
+                     aes(
+                        x = Values,
+                        y = PDF
+                     )
+                  ) +
+                  geom_point(
+                     data = dtDistribution,
+                     aes(
+                        x = Values,
+                        y = PDF
+                     )
+                  ) +
+                  scale_y_continuous(label = percent, name = 'PDF') +
+                  xlab(NULL) +
+                  ggtitle(
+                     fRetrieveShinyValue(
+                        input = input,
+                        id = 'VariableName',
+                        vcSuffixes = iLocalVariableNumber
+                     )
+                  )
+
+            })
 
 
-            },
-            options = list(
-               bLengthChange = F,
-               pageLength = 10,
-               searching = F
+
+            # DistributionChartCDF
+            output[[paste0('DistributionChartCDF', iLocalVariableNumber)]] = renderPlot({
+               
+               dtDistribution = lReactiveValues[[paste0('dtDistribution', iLocalVariableNumber)]]
+
+               if ( is.null(dtDistribution) ) {
+
+                  return ( NULL )
+                  
+               }
+
+               ggplot() +
+                  geom_point(
+                     data = dtDistribution,
+                     aes(
+                        x = Values,
+                        y = CDF
+                     )
+                  ) +
+                  geom_line(
+                     data = dtDistribution,
+                     aes(
+                        x = Values,
+                        y = CDF
+                     )
+                  ) +
+                  scale_y_continuous(label = percent, name = 'CDF') +
+                  xlab(NULL) +
+                  ggtitle(
+                     fRetrieveShinyValue(
+                        input = input,
+                        id = 'VariableName',
+                        vcSuffixes = iLocalVariableNumber
+                     )
+                  )
+
+            })
+
+            # DistributionDetails
+            output[[paste0('DistributionDetails', iLocalVariableNumber)]] = renderDataTable(
+               {
+
+                  dtDistribution = lReactiveValues[[paste0('dtDistribution', iLocalVariableNumber)]]
+
+                  if ( is.null(dtDistribution) ) return ( NULL )
+
+                  dtDistribution[, list(Values, PDF, CDF)]
+
+
+               },
+               options = list(
+                  bLengthChange = F,
+                  pageLength = 10,
+                  searching = F
+               )
             )
-         )
-           
 
-         # DistributionDetails
-         output[[paste0('SensitivityDetails', iLocalVariableNumber)]] = renderDataTable(
-            {
 
-               dtSensitivity = lReactiveValues[[paste0('dtSensitivity', iLocalVariableNumber)]]
+            if ( bLoadCorrelations ) {
 
-               if ( is.null(dtSensitivity) ) return ( NULL )
+               # DistributionDetails
+               output[[paste0('SensitivityDetails', iLocalVariableNumber)]] = renderDataTable(
+                  {
 
-               datatable(dtSensitivity)
+                     dtSensitivity = lReactiveValues[[paste0('dtSensitivity', iLocalVariableNumber)]]
 
-            },
-            options = list(
-               bLengthChange = F,
-               pageLength = 10,
-               searching = F
+                     if ( is.null(dtSensitivity) ) return ( NULL )
+
+                     datatable(dtSensitivity)
+
+                  },
+                  options = list(
+                     bLengthChange = F,
+                     pageLength = 10,
+                     searching = F
+                  )
+                  # %>% 
+                  #    formatRound(
+                  #       c('Correlations','VarianceContribution'), 
+                  #       2
+                  #    )
+               ) 
+
+            }
+
+            # DistributionSummary
+            output[[paste0('DistributionSummary', iLocalVariableNumber)]] = renderDataTable(
+               {
+
+                  dtVariableSummary = lReactiveValues[[paste0('dtVariableSummary', iLocalVariableNumber)]]
+
+                  dtVariableSummary
+
+
+               },
+               options = list(
+                  bLengthChange = F,
+                  paging = FALSE
+               )
             )
-            # %>% 
-            #    formatRound(
-            #       c('Correlations','VarianceContribution'), 
-            #       2
-            #    )
-         ) 
+            
+         })
 
-         # DistributionSummary
-         output[[paste0('DistributionSummary', iLocalVariableNumber)]] = renderDataTable(
-            {
-
-               dtVariableSummary = lReactiveValues[[paste0('dtVariableSummary', iLocalVariableNumber)]]
-
-               dtVariableSummary
-
-
-            },
-            options = list(
-               bLengthChange = F,
-               paging = FALSE
-            )
-         )
-         
-      })
-
+      }
+   
    }
-
 
 
    # To show notifications, I basically show a pop up
@@ -2978,13 +2991,16 @@ function(input, output, session) {
 
          lReactiveValues$iTotalVariables = length(lVariablesMetadata)
 
-
-         # removing all the variable rows and adding rows for the new variables
-         removeUI(
-            selector = paste0(
-               "#PanelToAddVariables"
+         if ( bLoadGUI ) {
+               
+            # removing all the variable rows and adding rows for the new variables
+            removeUI(
+               selector = paste0(
+                  "#PanelToAddVariables"
+               )
             )
-         )
+
+         }
 
          insertUI(
             selector = "#ControlPanel",
@@ -2992,17 +3008,21 @@ function(input, output, session) {
             uiPanelToAddVariables
          )
 
-         for ( iVariableNumber in seq(isolate(lReactiveValues$iTotalVariables)) ) {
+         if ( bLoadGUI ) {
 
-            removeUI(
-               selector = paste0(
-                  "#",
-                  paste0(
-                     'PanelFor', 
-                     iVariableNumber
+            for ( iVariableNumber in seq(isolate(lReactiveValues$iTotalVariables)) ) {
+
+               removeUI(
+                  selector = paste0(
+                     "#",
+                     paste0(
+                        'PanelFor', 
+                        iVariableNumber
+                     )
                   )
                )
-            )
+
+            }
 
          }
 
@@ -3025,32 +3045,35 @@ function(input, output, session) {
             !is.na(vcEmpiricalDistributionNames)
          ]
 
+         if ( bLoadGUI ) {
 
-         # Adding UI for each new variable
-         for ( iVariableNumber in seq(length(lVariablesMetadata))) {
+            # Adding UI for each new variable
+            for ( iVariableNumber in seq(length(lVariablesMetadata))) {
 
-            insertUI(
-               selector = "#PanelToAddVariables",
-               where = "afterBegin",
-               # ui = 
-               ui = fCreateVariableAdditionUI(
-                  iVariableNumber = iVariableNumber,
-                  bIsInput = lVariablesMetadata[[iVariableNumber]]$bIsInput,
-                  cVariableName = lVariablesMetadata[[iVariableNumber]]$cVariableName,
-                  cVariableDescription = lVariablesMetadata[[iVariableNumber]]$cVariableDescription,
-                  cDistribution = lVariablesMetadata[[iVariableNumber]]$cDistribution,
-                  lParameters = lVariablesMetadata[[iVariableNumber]]$lParameters,
-                  # nNormalMean = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalMean,
-                  # nNormalSD = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalSD,
-                  # nBetaShapeAlpha = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeAlpha,
-                  # nBetaShapeBeta = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeBeta,
-                  # nConstant = lVariablesMetadata[[iVariableNumber]]$lParameters$nConstant,
-                  vcEmpiricalDistributionNames = vcEmpiricalDistributionNames,
-                  nDistributionUpperBound = lVariablesMetadata[[iVariableNumber]]$nDistributionUpperBound,
-                  nDistributionLowerBound = lVariablesMetadata[[iVariableNumber]]$nDistributionLowerBound,
-                  cEquation = lVariablesMetadata[[iVariableNumber]]$cEquation
+               insertUI(
+                  selector = "#PanelToAddVariables",
+                  where = "afterBegin",
+                  # ui = 
+                  ui = fCreateVariableAdditionUI(
+                     iVariableNumber = iVariableNumber,
+                     bIsInput = lVariablesMetadata[[iVariableNumber]]$bIsInput,
+                     cVariableName = lVariablesMetadata[[iVariableNumber]]$cVariableName,
+                     cVariableDescription = lVariablesMetadata[[iVariableNumber]]$cVariableDescription,
+                     cDistribution = lVariablesMetadata[[iVariableNumber]]$cDistribution,
+                     lParameters = lVariablesMetadata[[iVariableNumber]]$lParameters,
+                     # nNormalMean = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalMean,
+                     # nNormalSD = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalSD,
+                     # nBetaShapeAlpha = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeAlpha,
+                     # nBetaShapeBeta = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeBeta,
+                     # nConstant = lVariablesMetadata[[iVariableNumber]]$lParameters$nConstant,
+                     vcEmpiricalDistributionNames = vcEmpiricalDistributionNames,
+                     nDistributionUpperBound = lVariablesMetadata[[iVariableNumber]]$nDistributionUpperBound,
+                     nDistributionLowerBound = lVariablesMetadata[[iVariableNumber]]$nDistributionLowerBound,
+                     cEquation = lVariablesMetadata[[iVariableNumber]]$cEquation
+                  )
                )
-            )
+
+            }
 
          }
 
@@ -3058,7 +3081,7 @@ function(input, output, session) {
          # some inconsistency in the background data. I can't remember why now.
          # Commenting this out since with bigger runs it is painful to wait
          # for the run to finish before you can start editing, etc
-         if ( F ) {
+         if ( T ) {
 
             # Committing
             lReactiveValues$lVariablesMetadata = lVariablesMetadata
