@@ -1,8 +1,7 @@
 
 function(input, output, session) {
 
-   bLoadGUI = F
-   bLoadCorrelations = F
+   bInferUpstreamVariables = F
 
    #' Function to generate uniform distribution
    #' @param iIterations The number of values to generate
@@ -468,7 +467,7 @@ function(input, output, session) {
    ) {
 
       dtDistribution = data.table(
-         Values = vnDistribution
+         Values = unlist(vnDistribution)
       )
 
       # Fitting the values into the buckets
@@ -497,7 +496,6 @@ function(input, output, session) {
 
       setkey(dtDistribution, Values)
       dtDistribution[, CDF := cumsum(PDF)]
-
 
       # Return
       return ( dtDistribution )
@@ -537,26 +535,29 @@ function(input, output, session) {
 
       # Step 1 of this function is validating the structure
 
-      # check for missing variable names
-      if (
-         any( vcVariableNames == '' | is.null(vcVariableNames) )
-      )  {
+      if ( isolate(input$checkboxValidations) ) {
 
-         lMainNotification = list(
-            cMessage = paste0(
-               "Missing variable names: ",
-               paste(
-                  which( vcVariableNames == '' | is.null(vcVariableNames) ), 
-                  collapse = '<br/>'
-               )
-            ),
-            cType = 'error'
-         )
+         # check for missing variable names
+         if (
+            any( vcVariableNames == '' | is.null(vcVariableNames) )
+         )  {
 
-         return ( lMainNotification )
+            lMainNotification = list(
+               cMessage = paste0(
+                  "Missing variable names: ",
+                  paste(
+                     which( vcVariableNames == '' | is.null(vcVariableNames) ), 
+                     collapse = '<br/>'
+                  )
+               ),
+               cType = 'error'
+            )
 
+            return ( lMainNotification )
+
+         }
       }
-      
+
       names(lVariablesMetadata) = vcVariableNames
 
       cat(
@@ -641,399 +642,411 @@ function(input, output, session) {
 
       )
 
+      if ( isolate(input$checkboxValidations) ) {
 
-      # check for duplicate variable names
-      viVariableNameCount = table(vcVariableNames)
 
-      if (
-         max(viVariableNameCount) > 1
-      )  {
+         # check for duplicate variable names
+         viVariableNameCount = table(vcVariableNames)
 
-         lMainNotification = list(
-            cMessage = paste0(
-               "Duplicate variable names:<br/>",
-               paste(
-                  names(viVariableNameCount)[
-                     viVariableNameCount > 1
-                  ], 
-                  collapse = '<br/>'
-               )
-            ),
-            cType = 'error'
-         )
+         if (
+            max(viVariableNameCount) > 1
+         )  {
 
-         return ( lMainNotification )
+            lMainNotification = list(
+               cMessage = paste0(
+                  "Duplicate variable names:<br/>",
+                  paste(
+                     names(viVariableNameCount)[
+                        viVariableNameCount > 1
+                     ], 
+                     collapse = '<br/>'
+                  )
+               ),
+               cType = 'error'
+            )
+
+            return ( lMainNotification )
+
+         }
 
       }
 
-      cat(
-         file = stderr(),
-         paste(
-            Sys.time(),
-            'fValidateVariablesMetadata: invalid equations\n'
+      if ( isolate(input$checkboxValidations) ) {
+
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'fValidateVariablesMetadata: invalid equations\n'
+            )
+
          )
 
-      )
+         # Check for invalid equations
+         dtVariableNameMapping[, NameLength := -nchar(VariableName)]
+         setkey(dtVariableNameMapping, NameLength)
+         
+         # save(
+         #    list = c('lVariablesMetadata','dtVariableNameMapping','dtAllowedOperations'),
+         #    file = '~/Desktop/MCFormulation.Rdata'
+         # )
+         
+         vcNotification = sapply(
+            lVariablesMetadata,
+            function(lVariableMetadata) {
 
-      # Check for invalid equations
-      dtVariableNameMapping[, NameLength := -nchar(VariableName)]
-      setkey(dtVariableNameMapping, NameLength)
-      
-      # save(
-      #    list = c('lVariablesMetadata','dtVariableNameMapping','dtAllowedOperations'),
-      #    file = '~/Desktop/MCFormulation.Rdata'
-      # )
-      
-      vcNotification = sapply(
-         lVariablesMetadata,
-         function(lVariableMetadata) {
+               cReturn = NULL
 
-            cReturn = NULL
+               if ( lVariableMetadata$bIsInput == T ) {
 
-            if ( lVariableMetadata$bIsInput == T ) {
+                  return ( cReturn )
 
-               return ( cReturn )
+               }
 
-            }
+               # Figure out what the upstream variables are
 
-            # Figure out what the upstream variables are
+               # Removing operators
+               cEquation = lVariableMetadata$cEquation
+               cEquationWithOnlyCoefficients = lVariableMetadata$cEquation
+               vcUpstreamVariables = c()
+               
+               # print(700)
+               # print(cEquation)
 
-            # Removing operators
-            cEquation = lVariableMetadata$cEquation
-            cEquationWithOnlyCoefficients = lVariableMetadata$cEquation
-            vcUpstreamVariables = c()
-            
-            # print(700)
-            # print(cEquation)
+               cEquation = gsub(
+                  cEquation,
+                  pattern = '\\t|\\n',
+                  replacement = ''
+               )
 
-            cEquation = gsub(
-               cEquation,
-               pattern = '\\t|\\n',
-               replacement = ''
-            )
+               cEquationWithOnlyCoefficients = gsub(
+                  cEquationWithOnlyCoefficients,
+                  pattern = '\\t|\\n',
+                  replacement = ''
+               )
+               
+               # print(700.5)
+               # print(cEquation)
 
-            cEquationWithOnlyCoefficients = gsub(
-               cEquationWithOnlyCoefficients,
-               pattern = '\\t|\\n',
-               replacement = ''
-            )
-            
-            # print(700.5)
-            # print(cEquation)
+               for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
-            for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
+                  if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
+                     
+                     cEquationWithOnlyCoefficients = strsplit(
+                        cEquationWithOnlyCoefficients,
+                        dtVariableNameMapping[iRow, VariableName]
+                     )
+                     
+                     cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
 
-               if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
-                  
-                  cEquationWithOnlyCoefficients = strsplit(
-                     cEquationWithOnlyCoefficients,
-                     dtVariableNameMapping[iRow, VariableName]
-                  )
-                  
-                  cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
+                     cEquation = unlist(strsplit(
+                        x = as.character(cEquation),
+                        split = dtVariableNameMapping[iRow, VariableName]
+                     ))
+
+                     if ( length(cEquation) == 0 ) {
+                        cEquation = ''
+                        cEquationWithOnlyCoefficients = ''
+                     }
+                     
+                     # print(710)
+                     # print(cEquation)
+
+                  }
+
+               }
+
+               for ( cPattern in c(' ', ',') ) {
+
+                  # print(715)
+                  # print(cEquation)
 
                   cEquation = unlist(strsplit(
                      x = as.character(cEquation),
-                     split = dtVariableNameMapping[iRow, VariableName]
+                     split = cPattern
                   ))
+
+                  # print(cEquation)
+
+                  cEquationWithOnlyCoefficients = unlist(strsplit(
+                     x = as.character(cEquationWithOnlyCoefficients),
+                     split = cPattern
+                  ))
+
+                  # print(cEquationWithOnlyCoefficients)
 
                   if ( length(cEquation) == 0 ) {
                      cEquation = ''
                      cEquationWithOnlyCoefficients = ''
                   }
-                  
-                  # print(710)
-                  # print(cEquation)
+
 
                }
 
-            }
-
-            for ( cPattern in c(' ', ',') ) {
-
-               # print(715)
-               # print(cEquation)
-
-               cEquation = unlist(strsplit(
-                  x = as.character(cEquation),
-                  split = cPattern
-               ))
-
-               # print(cEquation)
-
-               cEquationWithOnlyCoefficients = unlist(strsplit(
-                  x = as.character(cEquationWithOnlyCoefficients),
-                  split = cPattern
-               ))
-
-               # print(cEquationWithOnlyCoefficients)
-
-               if ( length(cEquation) == 0 ) {
-                  cEquation = ''
-                  cEquationWithOnlyCoefficients = ''
-               }
-
-
-            }
-
-            
-            # print(727)
-            # print(cEquation)
-            
-            cEquation = paste(
-               cEquation,
-               collapse = ''
-            )
-            
-
-            # check if functions have the mandatory arguments or not
-            for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
-
-
-               cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
                
-               cEquationWithOnlyCoefficients = strsplit(
-                  cEquationWithOnlyCoefficients,
-                  cOperatorString
+               # print(727)
+               # print(cEquation)
+               
+               cEquation = paste(
+                  cEquation,
+                  collapse = ''
                )
                
-               cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
 
-               # if it's a purely variable and functions based equation with no coefficients
-               # then strsplit makes it null or character(0) which messes with the next 
-               # iteration. Adding a harmless "" to prevent it.
-               cEquationWithOnlyCoefficients = paste0(cEquationWithOnlyCoefficients, '')
+               # check if functions have the mandatory arguments or not
+               for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
 
-               if ( !cOperatorString %in% c('(',')') ) {
 
-                  cMandatoryArguments = dtAllowedOperations[iOperatorNumber, MandatoryArguments]
-
-                  if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
-
-                     # print(744)
-                     # print(cEquation)
-                     
-                     cEquation = gsub(
-                        x = cEquation,
-                        pattern = cOperatorString,
-                        replacement = ''
-                     )
-
-                  }
-
-                  gregexprOperationsMatches = gregexpr(
-                     pattern = paste0(
-                        cOperatorString, 
-                        '\\(.*?\\)'
-                     ),
-                     text = cEquation
+                  cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
+                  
+                  cEquationWithOnlyCoefficients = strsplit(
+                     cEquationWithOnlyCoefficients,
+                     cOperatorString
                   )
+                  
+                  cEquationWithOnlyCoefficients = unlist(cEquationWithOnlyCoefficients)
 
-                  if ( gregexprOperationsMatches[[1]][1] != -1 ) {
+                  # if it's a purely variable and functions based equation with no coefficients
+                  # then strsplit makes it null or character(0) which messes with the next 
+                  # iteration. Adding a harmless "" to prevent it.
+                  cEquationWithOnlyCoefficients = paste0(cEquationWithOnlyCoefficients, '')
 
-                     vcOperationsInThisEquation = regmatches(
-                        x = cEquation,
-                        m = gregexprOperationsMatches, 
+                  if ( !cOperatorString %in% c('(',')') ) {
+
+                     cMandatoryArguments = dtAllowedOperations[iOperatorNumber, MandatoryArguments]
+
+                     if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
+
+                        # print(744)
+                        # print(cEquation)
+                        
+                        cEquation = gsub(
+                           x = cEquation,
+                           pattern = cOperatorString,
+                           replacement = ''
+                        )
+
+                     }
+
+                     gregexprOperationsMatches = gregexpr(
+                        pattern = paste0(
+                           cOperatorString, 
+                           '\\(.*?\\)'
+                        ),
+                        text = cEquation
                      )
 
-                     vcNotOperationsInThisEquation = regmatches(
-                        x = cEquation,
-                        m = gregexprOperationsMatches, 
-                        invert = T
-                     )
+                     if ( gregexprOperationsMatches[[1]][1] != -1 ) {
 
-                     cMandatoryArguments = gsub(
-                        cMandatoryArguments,
-                        pattern = ' ',
-                        replacement = ''
-                     )
+                        vcOperationsInThisEquation = regmatches(
+                           x = cEquation,
+                           m = gregexprOperationsMatches, 
+                        )
 
-                     vcArgumentsInThisFunction = unlist(strsplit(cMandatoryArguments, ','))
+                        vcNotOperationsInThisEquation = regmatches(
+                           x = cEquation,
+                           m = gregexprOperationsMatches, 
+                           invert = T
+                        )
 
-                     for ( cMandatoryArgument in vcArgumentsInThisFunction ) {
-         
-                        vcOriginalOperationsInThisEquation = vcOperationsInThisEquation
+                        cMandatoryArguments = gsub(
+                           cMandatoryArguments,
+                           pattern = ' ',
+                           replacement = ''
+                        )
+
+                        vcArgumentsInThisFunction = unlist(strsplit(cMandatoryArguments, ','))
+
+                        for ( cMandatoryArgument in vcArgumentsInThisFunction ) {
+            
+                           vcOriginalOperationsInThisEquation = vcOperationsInThisEquation
+                              
+                           vcOperationsInThisEquation = gsub(
+                              x = vcOperationsInThisEquation,
+                              pattern = paste0(cMandatoryArgument,'='),
+                              replacement = ''
+                           )
                            
+                           if ( all(vcOriginalOperationsInThisEquation == vcOperationsInThisEquation) ) {
+                           
+                              cReturn = paste(cReturn, ' ', cOperatorString, 'must explicitly specify', cMandatoryArguments)
+                              
+                           }
+
+                        }
+
                         vcOperationsInThisEquation = gsub(
                            x = vcOperationsInThisEquation,
-                           pattern = paste0(cMandatoryArgument,'='),
+                           pattern = cOperatorString,
                            replacement = ''
                         )
                         
-                        if ( all(vcOriginalOperationsInThisEquation == vcOperationsInThisEquation) ) {
-                        
-                           cReturn = paste(cReturn, ' ', cOperatorString, 'must explicitly specify', cMandatoryArguments)
-                           
+                        cEquation = c()
+
+                        if ( gregexprOperationsMatches[[1]][1] == 1 ) {
+
+                           cEquation[seq(length(vcOperationsInThisEquation))-2] = vcOperationsInThisEquation
+                           cEquation[seq(length(vcOperationsInThisEquation))-1] = vcNotOperationsInThisEquation
+
+                        } else {
+
+                           cEquation[seq(length(vcOperationsInThisEquation))-1] = vcOperationsInThisEquation
+                           cEquation[seq(length(vcOperationsInThisEquation))-2] = vcNotOperationsInThisEquation
+
                         }
 
-                     }
-
-                     vcOperationsInThisEquation = gsub(
-                        x = vcOperationsInThisEquation,
-                        pattern = cOperatorString,
-                        replacement = ''
-                     )
-                     
-                     cEquation = c()
-
-                     if ( gregexprOperationsMatches[[1]][1] == 1 ) {
-
-                        cEquation[seq(length(vcOperationsInThisEquation))-2] = vcOperationsInThisEquation
-                        cEquation[seq(length(vcOperationsInThisEquation))-1] = vcNotOperationsInThisEquation
-
-                     } else {
-
-                        cEquation[seq(length(vcOperationsInThisEquation))-1] = vcOperationsInThisEquation
-                        cEquation[seq(length(vcOperationsInThisEquation))-2] = vcNotOperationsInThisEquation
-
-                     }
-
-                     # cEquation = paste(
-                     #    cEquation,
-                     #    collapse = ''
-                     # )
-                     
-                     # print(825)
-                     # print(cEquation)
-        
-                  }  
-
-               }
-
-            }
-
-            if ( nchar(cEquation) > 0 ) {            
-
-               cEquation = strsplit(
-                  cEquation,
-                  '\\)'
-               )
-
-               cEquation = strsplit(
-                  unlist(cEquation),
-                  '\\('
-               )
-
-               cEquation = strsplit(
-                  unlist(cEquation),
-                  ' '
-               )
-
-               cEquation = strsplit(
-                  unlist(cEquation),
-                  '\t'
-               )
-
-            }
-            
-            # print('Final')
-            # print(cEquationWithOnlyCoefficients)
-            # print(cEquation)
-
-            if ( length(cEquation) > 0) {
-
-               if ( any(nchar(cEquation) > 0) ) {
-
-                  if ( 
-                     any(is.na(as.numeric(unlist(cEquationWithOnlyCoefficients[sapply(cEquationWithOnlyCoefficients, nchar)>0])))) |
-                     paste(cEquationWithOnlyCoefficients, collapse = '' ) != cEquation
-                  ) {
-
-                     cReturn = paste0(
-                        lVariableMetadata$cVariableName,
-                        ': ',
-                        paste(
-                           cEquation,
-                           collapse = ', '
-                        ),
-                        cReturn
-                     )
+                        # cEquation = paste(
+                        #    cEquation,
+                        #    collapse = ''
+                        # )
+                        
+                        # print(825)
+                        # print(cEquation)
+         
+                     }  
 
                   }
 
                }
+
+               if ( nchar(cEquation) > 0 ) {            
+
+                  cEquation = strsplit(
+                     cEquation,
+                     '\\)'
+                  )
+
+                  cEquation = strsplit(
+                     unlist(cEquation),
+                     '\\('
+                  )
+
+                  cEquation = strsplit(
+                     unlist(cEquation),
+                     ' '
+                  )
+
+                  cEquation = strsplit(
+                     unlist(cEquation),
+                     '\t'
+                  )
+
+               }
+               
+               # print('Final')
+               # print(cEquationWithOnlyCoefficients)
+               # print(cEquation)
+
+               if ( length(cEquation) > 0) {
+
+                  if ( any(nchar(cEquation) > 0) ) {
+
+                     if ( 
+                        any(is.na(as.numeric(unlist(cEquationWithOnlyCoefficients[sapply(cEquationWithOnlyCoefficients, nchar)>0])))) |
+                        paste(cEquationWithOnlyCoefficients, collapse = '' ) != cEquation
+                     ) {
+
+                        cReturn = paste0(
+                           lVariableMetadata$cVariableName,
+                           ': ',
+                           paste(
+                              cEquation,
+                              collapse = ', '
+                           ),
+                           cReturn
+                        )
+
+                     }
+
+                  }
+               }
+
+               return ( cReturn ) 
+
             }
-
-            return ( cReturn ) 
-
-         }
-      )
-
-      vcNotification = unlist(vcNotification)
-
-      if ( any(!is.null(vcNotification)) )  {
-
-         lMainNotification = list(
-            cMessage = paste0(
-               "Unable to evaluate some terms:<br/>",
-               paste(
-                  vcNotification,
-                  collapse = '<br/>'
-               )
-            ),
-            cType = 'error'
          )
 
-         return ( lMainNotification )
+         vcNotification = unlist(vcNotification)
+
+         if ( any(!is.null(vcNotification)) )  {
+
+            lMainNotification = list(
+               cMessage = paste0(
+                  "Unable to evaluate some terms:<br/>",
+                  paste(
+                     vcNotification,
+                     collapse = '<br/>'
+                  )
+               ),
+               cType = 'error'
+            )
+
+            return ( lMainNotification )
+
+         }
 
       }
 
-      cat(
-         file = stderr(),
-         paste(
-            Sys.time(),
-            'fValidateVariablesMetadata: missing equations\n'
+      if ( isolate(input$checkboxValidations) ) {
+            
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'fValidateVariablesMetadata: missing equations\n'
+            )
+
          )
 
-      )
+         # Check for missing equations
+         vcNotification = sapply(
+            lVariablesMetadata,
+            function( lVariableMetadata ) {
 
-      # Check for missing equations
-      vcNotification = sapply(
-         lVariablesMetadata,
-         function( lVariableMetadata ) {
+               cReturn = NULL
 
-            cReturn = NULL
+               if (!lVariableMetadata$bIsInput) {
 
-            if (!lVariableMetadata$bIsInput) {
+                  if ( 
+                     nchar(
+                        gsub(
+                           x = lVariableMetadata$cEquation,
+                           pattern = ' ',
+                           replacement = ''
+                        )
+                     ) == 0
+                  ) {
 
-               if ( 
-                  nchar(
-                     gsub(
-                        x = lVariableMetadata$cEquation,
-                        pattern = ' ',
-                        replacement = ''
-                     )
-                  ) == 0
-               ) {
+                     cReturn = lVariableMetadata$cVariableName
 
-                  cReturn = lVariableMetadata$cVariableName
+                  }
 
                }
 
+               cReturn
+
             }
 
-            cReturn
-
-         }
-
-      )
-
-      vcNotification = unlist(vcNotification)
-
-      if ( any ( !is.null(vcNotification) ) ) {
-
-         lMainNotification = list(
-            cMessage = paste0(
-               "Equations missing for:<br/>",
-               paste(
-                  vcNotification,
-                  collapse = '<br/>'
-               )
-            ),
-            cType = 'error'
          )
 
-         return ( lMainNotification )
+         vcNotification = unlist(vcNotification)
+
+         if ( any ( !is.null(vcNotification) ) ) {
+
+            lMainNotification = list(
+               cMessage = paste0(
+                  "Equations missing for:<br/>",
+                  paste(
+                     vcNotification,
+                     collapse = '<br/>'
+                  )
+               ),
+               cType = 'error'
+            )
+
+            return ( lMainNotification )
+
+         }
 
       }
 
@@ -1043,7 +1056,6 @@ function(input, output, session) {
             Sys.time(),
             'fValidateVariablesMetadata: what is this exactly?\n'
          )
-
       )
 
       # Step 1 of this function is calculating order of evaluation
@@ -1068,6 +1080,7 @@ function(input, output, session) {
          }
 
       )
+      
       names(lVariablesMetadata3) = names(lVariablesMetadata)
 
       repeat {
@@ -1075,7 +1088,7 @@ function(input, output, session) {
          lVariablesMetadata2 = lapply(
             names(lVariablesMetadata3),
             function(x) {
-               
+                              
                vcUpstreamVariables = unlist(lVariablesMetadata3[[x]]$vcUpstreamVariables)
 
                if ( length(vcUpstreamVariables) == 0 ) {
@@ -1100,7 +1113,7 @@ function(input, output, session) {
 
                iSequence = 1 + iHighestSequence
             
-               list(
+               lReturn = list(
                   # VariableNumber = lVariablesMetadata3[[x]]$VariableNumber,
                   cVariableName = lVariablesMetadata3[[x]]$cVariableName,
                   # IsInput = lVariablesMetadata3[[x]]$IsInput,
@@ -1108,6 +1121,35 @@ function(input, output, session) {
                   vcUpstreamVariables = lVariablesMetadata3[[x]]$vcUpstreamVariables,
                   iSequence = max(iSequence, lVariablesMetadata3[[x]]$iSequence)
                )
+
+               lReturn
+
+            }
+         )
+
+         cat(
+            file = cEvaluationOrderLocation,
+            'VariableName,Sequence'
+         )
+
+         lapply(
+            lVariablesMetadata2,
+            function(lVariableMetadata) {
+               
+               if ( length(lVariableMetadata$vcUpstreamVariables) > 0 ) {
+
+                  cat(
+                     file = cEvaluationOrderLocation,
+                     append = T,
+                     paste0(
+                        '\n',
+                        lVariableMetadata$vcUpstreamVariables,
+                        ',',
+                        lVariableMetadata$iSequence                        
+                     )
+                  )
+
+               }
             }
          )
 
@@ -1163,16 +1205,32 @@ function(input, output, session) {
          
       }
 
+      dtEvaluationOrderLocation = fread(cEvaluationOrderLocation)
+      dtEvaluationOrderLocation = dtEvaluationOrderLocation[,
+         list(
+            Sequence = max(Sequence)
+         ),
+         VariableName
+      ]
+
       # Assigning sequence number 
       lVariablesMetadata = lapply(
          names(lVariablesMetadata),
          function ( cVariableListName ) {
-
+      
             lVariablesMetadata[[cVariableListName]]$iSequence = lVariablesMetadata3[[cVariableListName]]$iSequence
+            lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = dtEvaluationOrderLocation[VariableName == cVariableListName,Sequence]
+            if ( is.null(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence)) {
+               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
+            }
+            if ( length(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence) == 0 ) {
+               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
+            }
             lVariablesMetadata[[cVariableListName]]
 
          }
       )
+
       rm(lVariablesMetadata3)
 
       return ( lVariablesMetadata )
@@ -1187,7 +1245,9 @@ function(input, output, session) {
    fEvaluateVariables = function(
       iIterations,
       lVariablesMetadata,
-      dtAllowedOperations
+      dtAllowedOperations,
+      bStoreResults = F,
+      cResultsStorageLocation = ''
    ) {
 
       cat(
@@ -1198,7 +1258,24 @@ function(input, output, session) {
          )
       )
 
+      if ( bStoreResults ) {
 
+         file.remove(
+            list.files(
+               cResultsStorageLocation,
+               full.names = T,
+               recursive = T
+            )
+         )
+
+         dir.create(
+            cResultsStorageLocation,
+            showWarnings = F,
+            recursive = T
+         )
+
+      }
+      
       #' @todo The utility of some variables is not beyond certain other variables
       #' so try and implement logic to get rid of these variables to save memory
 
@@ -1234,7 +1311,6 @@ function(input, output, session) {
             vcVariablesWhichAreConstant = c()
 
             for ( iVariableNumber in vcEvaluationOrder ) {
-
 
                lVariableMetadata = lVariablesMetadata[[iVariableNumber]]
 
@@ -1349,9 +1425,6 @@ function(input, output, session) {
                # output variable evaluation logic
                } else {
 
-                  # print(str(lVariableMetadata))
-                  # print('~~~~~~~~~~~~~~~')
-
                   cEquation = lVariableMetadata$cEquation
 
                   bNeedsLoop = F
@@ -1439,13 +1512,13 @@ function(input, output, session) {
                   # Calculating sensitivities
                   # ------------------------------------------------------------
 
-                  viVariablesToMeasureSensitivityAgainst = fGetAllUpstreamVariableNumbers (
-                     lVariableMetadata$iVariableNumber,
-                     lVariablesMetadata,
-                     bGiveIndependentVariables = F
-                  )
-
-                  if ( bLoadCorrelations ) {
+                  if ( isolate(input$checkboxLoadCorrelations) ) {
+                        
+                     viVariablesToMeasureSensitivityAgainst = fGetAllUpstreamVariableNumbers (
+                        lVariableMetadata$iVariableNumber,
+                        lVariablesMetadata,
+                        bGiveIndependentVariables = F
+                     )
 
                      # Spearman's correlation
                      vnCorrelations = sapply(
@@ -1491,9 +1564,59 @@ function(input, output, session) {
 
                }
 
+               # todo: for some reason, on uploading a file vnDistribution is
+               # a named list whereas when doing it through run it gives an 
+               # unnamed vector
+               vnDistribution = c(unlist(vnDistribution))
+
+               if ( bStoreResults ) {
+
+                  save(
+                     list = c('lVariableMetadata','vnDistribution'),
+                     file = paste0(
+                        cResultsStorageLocation, '/',
+                        lVariableMetadata$iVariableNumber,
+                        '.Rdata'
+                     )
+                  )
+                  
+               }
+
                assign(
                   paste0('Variable', iVariableNumber),
                   vnDistribution
+               )
+
+               vcVariablesToDelete = sapply(
+                  lVariablesMetadata,
+                  function( lVariableMetadata2 ) {
+                     
+                     cReturn = NULL
+                     if ( lVariableMetadata2$iDeleteAfterSequence > lVariableMetadata$iSequence ) {
+                        cReturn = lVariableMetadata2$cVariableName
+                     }
+                     cReturn
+                  }
+               )
+
+               vcVariablesToDelete = unlist(vcVariablesToDelete)
+               vcVariablesToDelete = vcVariablesToDelete[!is.null(vcVariablesToDelete)]
+
+               if ( length(vcVariablesToDelete) > 0 ) {
+                     
+                  rm(
+                     list = vcVariablesToDelete
+                  )
+
+               }
+
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fEvaluateVariables: Preparing summaries',
+                     '\n'
+                  )
                )
 
                # Don't need to store this. Saves lots of memory.
@@ -1503,7 +1626,15 @@ function(input, output, session) {
                dtDistribution = fBucketDistributions(
                   vnDistribution
                )
-
+               
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fEvaluateVariables: PDFs done',
+                     '\n'
+                  )
+               )
                lReactiveValuesPlaceholder[[paste0('dtDistribution', iVariableNumber)]] = dtDistribution
 
                # Qunatiles, means, etc.
@@ -1527,6 +1658,15 @@ function(input, output, session) {
                      ) 
                   )
                )
+                              
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fEvaluateVariables: Percentiles done',
+                     '\n'
+                  )
+               )
 
                lReactiveValues[[paste0('dtVariableSummary', iVariableNumber)]] = dtVariableSummary
 
@@ -1540,6 +1680,15 @@ function(input, output, session) {
                   )
 
                }
+                              
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fEvaluateVariables: Summary done',
+                     '\n'
+                  )
+               )
 
                # save(
                #    list = paste0('Variable', iVariableNumber), 
@@ -1617,7 +1766,7 @@ function(input, output, session) {
    #' Calculate order of evaluation of variables
    #' Looks at dependencies in the eqations, etc.
    #' and sequences each ariable accordingly
-   fOrderOfEvaluation = function(
+   fInferUpstreamVariables = function(
       lVariablesMetadata
    ) {
 
@@ -1625,7 +1774,7 @@ function(input, output, session) {
          file = stderr(),
          paste(
             Sys.time(),
-            'fOrderOfEvaluation',
+            'fInferUpstreamVariables',
             '\n'
 
          )
@@ -1633,8 +1782,8 @@ function(input, output, session) {
       )      
          
       # Trying to figure out what variables are dependent on what other variables
-      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
-
+      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)
+      
       # sorting the list of variables in order of name so that if one variable
       # name is used inside another variable name then that doesn't cause problems
       #' @todo this seems to be duplicated with the validation. maybe try and reuse.   
@@ -1650,7 +1799,7 @@ function(input, output, session) {
                file = stderr(),
                paste(
                   Sys.time(),
-                  '\nfOrderOfEvaluation:',
+                  '\nfInferUpstreamVariables:',
                   lVariableMetadata$cVariableName,
                   '\n'
                )
@@ -2003,6 +2152,46 @@ function(input, output, session) {
 
    }
 
+   fOrderOfDeletion = function(
+      lVariablesMetadata
+   ) {
+
+      lVariablesMetadata = lapply(
+         lVariablesMetadata,
+         function ( lVariableMetadata ) {
+            
+            lVariableMetadata$iDeleteAfterSequence = max(
+               sapply(
+                  lVariablesMetadata,
+                  function ( lVariableMetadata2 ) {
+                     
+                     iSequence = 0
+                     
+                     if (
+                        !is.null(lVariableMetadata2$vcUpstreamVariables)
+                     ) {
+                           
+                        if ( 
+                           lVariableMetadata$cVariableName %in% lVariableMetadata2$vcUpstreamVariables
+                        ) {
+                           iSequence = lVariableMetadata2$iSequence
+                        }
+
+                     }
+
+                     iSequence
+
+                  }
+               )
+            )
+            lVariableMetadata
+         }
+      )
+
+      lVariablesMetadata
+
+   }
+
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
    uiPanelToAddVariables = wellPanel(
@@ -2104,19 +2293,25 @@ function(input, output, session) {
       HTML(
          "
 
-         <h4>Getting started</h4>
+         <br><h4>Getting started</h4>
          You need the Add Variable button, the iterations setting, and the run button.
 
-         <h4>Saving your scenarios</h4>
+         <br><h4>Saving your scenarios</h4>
          You can save, reload your scenarios on your local machine from the browse and download buttons in the box titled Local Machine.
          You can save, reload your scenarios on a virtual machine from the load and save buttons in the box titled Cloud. Someone will have to setup the virtual machine and configure certain things in the app accordingly.
          There is a sample scenario at DevelopmentExperimentation/SampleScenario.json for you to explore.
 
-         <h4>Summary Button</h4>
+         <br><h4>Summary Button</h4>
          A summary of the run, various percentiles, mean, median, etc. is presented in a tabular form.
 
-         <h4>Managing the space on your screen</h4>
+         <br><h4>Managing the space on your screen</h4>
          Look for the - or + sign towards the corner of various boxes. This means they are collapsible or expandible and will let you better manage your screen real estate.
+
+         <br><h4>Speed up / memory tips</h4>
+         You can choose to turn off the variable GUI. You won't get to see the row for each variable but you can still see the summary details which should be enough in most cases. This option is recommended for simulations with upwards of, say, a 100 variables.
+         <br>You can choose to turn off correlations. In many simulations, the correlations may not be of any use.
+         <br>You can choose to turn off validations before runs. If you're using scenarios that have previous been downloaded from the tool, you can probably skip validations. If you're entering your scenario in the browser or making some changes to a previously downloaded scenario then the recommendation is to keep validations on otherwise the app may crash and you may lose work.
+         <br>You can choose to turn off storage of the last result before the run. Keeping it on lets you download the raw data the simulation generated for the last run.
 
          "
       )
@@ -2241,24 +2436,40 @@ function(input, output, session) {
          message = 'Run: Retrieving metadata'
       )
 
-      # Prepare the variable meta data list
-      lVariablesMetadata = fPrepareVariablesMetadataList(
-         iTotalVariables
-      )
+      if ( isolate(input$checkboxLoadGUI) ) {
 
-      fMetaDataToJSONFile(
-         lVariablesMetadata = lVariablesMetadata,
-         cFileName = '/tmp/tmp.json'
-      )
-      
+         # Prepare the variable meta data list
+         lVariablesMetadata = fPrepareVariablesMetadataList(
+            iTotalVariables
+         )
+
+         # fMetaDataToJSONFile(
+         #    lVariablesMetadata = lVariablesMetadata,
+         #    cFileName = '/tmp/tmp.json'
+         # )
+         
+
+      } else {
+
+         lVariablesMetadata = isolate(lReactiveValues$lVariablesMetadata)
+
+      }
 
       # Trying to figure out what variables are dependent on what other variables
       dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
 
-      lVariablesMetadata = fOrderOfEvaluation(
-         lVariablesMetadata
-      )
+      if ( bInferUpstreamVariables ) {
 
+         lVariablesMetadata = fInferUpstreamVariables(
+            lVariablesMetadata
+         )
+
+      }
+
+      # lVariablesMetadata = fOrderOfDeletion(
+      #    lVariablesMetadata
+      # )
+      
       cat(
          file = stderr(),
          paste(
@@ -2268,16 +2479,20 @@ function(input, output, session) {
 
       )
 
-      progress$set(
-         message = 'Run: Basic checks'
-      )
+      if ( isolate(input$checkboxValidations)) {
 
-      # Validations
-      lVariablesMetadata = fValidateVariablesMetadata(
-         input = input,
-         lVariablesMetadata = lVariablesMetadata,
-         dtAllowedOperations = dtAllowedOperations
-      )
+         progress$set(
+            message = 'Run: Basic checks'
+         )
+
+         # Validations
+         lVariablesMetadata = fValidateVariablesMetadata(
+            input = input,
+            lVariablesMetadata = lVariablesMetadata,
+            dtAllowedOperations = dtAllowedOperations
+         )
+
+      }
 
       if ( !is.null(lVariablesMetadata$cType) ) {
 
@@ -2304,7 +2519,9 @@ function(input, output, session) {
       lReactiveValuesPlaceholder = fEvaluateVariables(
          iIterations = input$Iterations,
          lVariablesMetadata,
-         dtAllowedOperations
+         dtAllowedOperations,
+         bStoreResults = isolate(input$checkboxStoreLastResult),
+         cResultsStorageLocation = cResultsStorageLocation
       )
 
       if ( !is.null(lReactiveValuesPlaceholder$cType) ) {
@@ -2329,7 +2546,7 @@ function(input, output, session) {
 
    # Since variable are being added, we need to dynamically handle them
    # https://gist.github.com/wch/5436415/
-   if ( bLoadGUI ) {
+   if ( isolate(input$checkboxLoadGUI) ) {
       
       for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
 
@@ -2436,7 +2653,7 @@ function(input, output, session) {
             )
 
 
-            if ( bLoadCorrelations ) {
+            if ( isolate(input$checkboxLoadCorrelations) ) {
 
                # DistributionDetails
                output[[paste0('SensitivityDetails', iLocalVariableNumber)]] = renderDataTable(
@@ -2850,6 +3067,73 @@ function(input, output, session) {
 
    )
 
+   # Downloading a scenario for later use
+   output$downloadScenarioResults = downloadHandler(
+
+      filename = function() {
+
+         paste0(
+            "ScenarioResults-",
+            strftime(Sys.time(), '%Y%m%d%H%M'),
+            ".csv"
+         )
+
+      },
+      content = function( file ) {
+
+         vcFiles = list.files(
+            cResultsStorageLocation,
+            full.names = T
+         )
+
+         if ( length(vcFiles) > 0 ) {            
+
+            lResults = lapply(
+               vcFiles,
+               function ( cFile ) {
+                  
+                  load(cFile)
+                  
+                  list(
+                     vnDistribution = vnDistribution,
+                     lVariableMetadata = lVariableMetadata
+                  )
+                  
+               }
+            )
+
+            dtResults = do.call(
+               cbind,
+               lapply(
+                  lResults,
+                  function(x) x$vnDistribution
+               )
+            )
+
+            dtResults = as.data.table(dtResults)
+
+            setnames(
+               dtResults,
+               sapply(
+                  lResults,
+                  function(x) x$lVariableMetadata$cVariableName
+               )
+            )
+
+            write.csv(
+               dtResults,
+               file = file,
+               row.names = F,
+               quote = F,
+               na = ''
+            )
+
+         }
+
+      }
+
+   )
+
    # Upon uploading a scenario -
    # Code is very similar to the logic against actionButtonRun
    observe(
@@ -2932,9 +3216,17 @@ function(input, output, session) {
 
                )
 
-               lVariablesMetadata = fOrderOfEvaluation(
-                  lVariablesMetadata
-               )
+               if ( bInferUpstreamVariables ) {
+
+                  lVariablesMetadata = fInferUpstreamVariables(
+                     lVariablesMetadata
+                  )
+
+               }
+
+               # lVariablesMetadata = fOrderOfDeletion(
+               #    lVariablesMetadata
+               # )               
 
                cat(
                   file = stderr(),
@@ -2942,13 +3234,20 @@ function(input, output, session) {
                      Sys.time(),
                      'fileInputUploadScenario: Validating variable metadata\n'
                   )
-
                )
 
                lVariablesMetadata = fValidateVariablesMetadata(
                   input = input,
                   lVariablesMetadata = lVariablesMetadata,
                   dtAllowedOperations = dtAllowedOperations
+               )
+
+               cat(
+                  file = stderr(),
+                  paste(
+                     Sys.time(),
+                     'fileInputUploadScenario: Variable metadata validated\n'
+                  )
                )
 
                if ( !is.null(lVariablesMetadata$cType) ) {
@@ -2991,16 +3290,12 @@ function(input, output, session) {
 
          lReactiveValues$iTotalVariables = length(lVariablesMetadata)
 
-         if ( bLoadGUI ) {
-               
-            # removing all the variable rows and adding rows for the new variables
-            removeUI(
-               selector = paste0(
-                  "#PanelToAddVariables"
-               )
+         # removing all the variable rows and adding rows for the new variables
+         removeUI(
+            selector = paste0(
+               "#PanelToAddVariables"
             )
-
-         }
+         )
 
          insertUI(
             selector = "#ControlPanel",
@@ -3008,7 +3303,7 @@ function(input, output, session) {
             uiPanelToAddVariables
          )
 
-         if ( bLoadGUI ) {
+         if ( isolate(input$checkboxLoadGUI) ) {
 
             for ( iVariableNumber in seq(isolate(lReactiveValues$iTotalVariables)) ) {
 
@@ -3045,7 +3340,7 @@ function(input, output, session) {
             !is.na(vcEmpiricalDistributionNames)
          ]
 
-         if ( bLoadGUI ) {
+         if ( isolate(input$checkboxLoadGUI) ) {
 
             # Adding UI for each new variable
             for ( iVariableNumber in seq(length(lVariablesMetadata))) {
@@ -3102,9 +3397,18 @@ function(input, output, session) {
             lReactiveValuesPlaceholder = fEvaluateVariables(
                iIterations = input$Iterations,
                lVariablesMetadata,
-               dtAllowedOperations
+               dtAllowedOperations,
+               bStoreResults = isolate(input$checkboxStoreLastResult),
+               cResultsStorageLocation = cResultsStorageLocation
             )
 
+            cat(
+               file = stderr(),
+               paste(
+                  Sys.time(),
+                  'fileInputUploadScenario: Evaluation over\n'
+               )
+            )
             # save(
             #    list = 'lVariablesMetadata',
             #    file = '/tmp/lVariablesMetadata.Rdata'
@@ -3119,7 +3423,7 @@ function(input, output, session) {
 
             for ( cName in names(lReactiveValuesPlaceholder) ) {
                lReactiveValues[[cName]] = lReactiveValuesPlaceholder[[cName]]
-            }
+            }            
 
             # Updating other details
             lReactiveValues$iTotalVariables = length(lVariablesMetadata)
@@ -3432,7 +3736,7 @@ function(input, output, session) {
    })
     
 
-    observeEvent(
+   observeEvent(
       input$actionButtonSaveScenarioOnCloud, {
 
          lVariablesMetadata = lReactiveValues[['lVariablesMetadata']]
@@ -3508,5 +3812,46 @@ function(input, output, session) {
 
    }
 
+   observe({
+
+      if ( input$checkboxLoadGUI == T ) {
+
+         lVariablesMetadata = isolate(lReactiveValues$lVariablesMetadata)
+
+         if ( !is.null(lVariablesMetadata) ) {
+
+            # Adding UI for each new variable
+            for ( iVariableNumber in seq(length(lVariablesMetadata))) {
+
+               insertUI(
+                  selector = "#PanelToAddVariables",
+                  where = "afterBegin",
+                  # ui = 
+                  ui = fCreateVariableAdditionUI(
+                     iVariableNumber = iVariableNumber,
+                     bIsInput = lVariablesMetadata[[iVariableNumber]]$bIsInput,
+                     cVariableName = lVariablesMetadata[[iVariableNumber]]$cVariableName,
+                     cVariableDescription = lVariablesMetadata[[iVariableNumber]]$cVariableDescription,
+                     cDistribution = lVariablesMetadata[[iVariableNumber]]$cDistribution,
+                     lParameters = lVariablesMetadata[[iVariableNumber]]$lParameters,
+                     # nNormalMean = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalMean,
+                     # nNormalSD = lVariablesMetadata[[iVariableNumber]]$lParameters$nNormalSD,
+                     # nBetaShapeAlpha = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeAlpha,
+                     # nBetaShapeBeta = lVariablesMetadata[[iVariableNumber]]$lParameters$nBetaShapeBeta,
+                     # nConstant = lVariablesMetadata[[iVariableNumber]]$lParameters$nConstant,
+                     vcEmpiricalDistributionNames = vcEmpiricalDistributionNames,
+                     nDistributionUpperBound = lVariablesMetadata[[iVariableNumber]]$nDistributionUpperBound,
+                     nDistributionLowerBound = lVariablesMetadata[[iVariableNumber]]$nDistributionLowerBound,
+                     cEquation = lVariablesMetadata[[iVariableNumber]]$cEquation
+                  )
+               )
+
+            }
+
+         }
+
+      }
+
+   })
 
 }

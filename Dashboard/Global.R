@@ -9,7 +9,7 @@ library(data.table)
 library(rjson)
 
 theme_set(theme_bw(12))
-
+options(shiny.maxRequestSize = 500*1024^2)
 lArchitectureParms = list()
 
 # Should point to where you've downloaded the repository
@@ -75,3 +75,10 @@ source(
 # string to something else which you are unlikely to enounter in you
 # variable names.
 cTempVariableString = 'Д'
+
+# stores the values of the variables for debugging, downloading, etc
+cResultsStorageLocation = paste0(
+   tempdir(), '/MCSimStorage/' 
+)
+
+cEvaluationOrderLocation = '/tmp/qweqwe.csv' # tempfile()

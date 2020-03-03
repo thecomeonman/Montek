@@ -51,6 +51,10 @@ body = dashboardBody(
                   actionButton(
                      inputId = "actionButtonViewSummary", 
                      label = "Summary"
+                  ),
+                  downloadButton(
+                     outputId = 'downloadScenarioResults',
+                     label = "Download Results"
                   )
                )
             )
@@ -97,6 +101,17 @@ body = dashboardBody(
                #       )
                #    )
                # ),
+               column(
+                  width = 4,
+                  box(
+                     title = 'App Settings',
+                     width = 12,
+                     checkboxInput("checkboxLoadGUI", "Load variable GUI?", TRUE),
+                     checkboxInput("checkboxLoadCorrelations", "Calculate correlations?", TRUE),
+                     checkboxInput("checkboxValidations", "Validate before run?", TRUE),
+                     checkboxInput("checkboxStoreLastResult", "Store last run values?", TRUE)
+                  )
+               ),
                column(
                   width = 4,
                   box(
