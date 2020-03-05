@@ -24,10 +24,9 @@ tanradian;tanradian;tanradian(3.14);Trigonometric tan in radians;T;;
 asinradian;asinradian;asinradian(1);Trigonometric sin inverse in radians;T;;
 acosradian;acosradian;acosradian(1);Trigonometric cos inverse in radians;T;;
 atanradian;atanradian;atanradian(1);Trigonometric tan inverse in radians;T;;
-rnorm;rnorm;rnorm(mean, sd);;F;mean,sd;n=iIterations
-min;min;min(variable1);"Gives min over ALL iteration, not just that one iteration";T;;
-max;max;max(variable1);"Gives max over ALL iteration, not just that one iteration";T;;
-pmin;pmin;pmin(...);"Gives min over variables from that iteration, not just that one iteration";T;;
-pmax;pmax;pmax(...);"Gives max over variables from that iteration, not just that one iteration";T;;
+rnorm;rnorm;rnorm(mean, sd);;T;mean,sd;n=iIterations
+pmin;min;min(...);"Gives min over variable values from that iteration";T;;
+pmax;max;max(...);"Gives max over variable values from that iteration";T;;
 floor;floor;floor(x);"Rounds off to lower integer";T;;
 ceiling;ceiling;ceiling(x);"Rounds off to upper integer";T;;
+randbetween;randbetween;randbetween(minLimit, maxLimit);;T;minLimit,maxLimit;n=iIterations

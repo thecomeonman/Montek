@@ -1,7 +1,8 @@
 
 function(input, output, session) {
 
-   bInferUpstreamVariables = F
+   bInferUpstreamVariables = T
+   bLoadGUIOverride = F
 
    #' Function to generate uniform distribution
    #' @param iIterations The number of values to generate
@@ -796,7 +797,6 @@ function(input, output, session) {
                # check if functions have the mandatory arguments or not
                for ( iOperatorNumber in seq(nrow(dtAllowedOperations)) ) {
 
-
                   cOperatorString = dtAllowedOperations[iOperatorNumber, OperatorString]
                   
                   cEquationWithOnlyCoefficients = strsplit(
@@ -815,10 +815,14 @@ function(input, output, session) {
 
                      cMandatoryArguments = dtAllowedOperations[iOperatorNumber, MandatoryArguments]
 
-                     if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
+                     # print(744)
+                     # print(cOperatorString)
+                     # print(dtAllowedOperations[iOperatorNumber])
 
-                        # print(744)
-                        # print(cEquation)
+                     # print(cMandatoryArguments)
+                     # print(cEquation)
+
+                     if ( is.na(cMandatoryArguments) | cMandatoryArguments == '' ) {
                         
                         cEquation = gsub(
                            x = cEquation,
@@ -835,6 +839,9 @@ function(input, output, session) {
                         ),
                         text = cEquation
                      )
+
+                     # print(750)
+                     # print(gregexprOperationsMatches)
 
                      if ( gregexprOperationsMatches[[1]][1] != -1 ) {
 
@@ -895,10 +902,10 @@ function(input, output, session) {
 
                         }
 
-                        # cEquation = paste(
-                        #    cEquation,
-                        #    collapse = ''
-                        # )
+                        cEquation = paste(
+                           cEquation,
+                           collapse = ''
+                        )
                         
                         # print(825)
                         # print(cEquation)
@@ -955,6 +962,9 @@ function(input, output, session) {
                            ),
                            cReturn
                         )
+
+                        # print('cReturn')
+                        # print(cReturn)
 
                      }
 
@@ -1050,188 +1060,192 @@ function(input, output, session) {
 
       }
 
-      cat(
-         file = stderr(),
-         paste(
-            Sys.time(),
-            'fValidateVariablesMetadata: what is this exactly?\n'
-         )
-      )
-
-      # Step 1 of this function is calculating order of evaluation
-      # The logic is basically to find the currently assigned sequence of evaluation
-      # of all upstream variables, say x, and then assign x + 1 as the sequence of 
-      # evaluation to the variable itself. Iterate till no changes.
-      i = 0
-
-      lVariablesMetadata3 = lapply(
-         lVariablesMetadata,
-         function( lVariableMetadata ) {
-
-            list(
-               # VariableNumber = lVariableMetadata[[x]]$VariableNumber,
-               cVariableName = lVariableMetadata$cVariableName,
-               # IsInput = lVariableMetadata[[x]]$IsInput,
-               # Equation = lVariableMetadata[[x]]$Equation,
-               vcUpstreamVariables = lVariableMetadata$vcUpstreamVariables,
-               iSequence = lVariableMetadata$iSequence
-            )
-
-         }
-
-      )
-      
-      names(lVariablesMetadata3) = names(lVariablesMetadata)
-
-      repeat {
-            
-         lVariablesMetadata2 = lapply(
-            names(lVariablesMetadata3),
-            function(x) {
-                              
-               vcUpstreamVariables = unlist(lVariablesMetadata3[[x]]$vcUpstreamVariables)
-
-               if ( length(vcUpstreamVariables) == 0 ) {
-
-                  iHighestSequence = 0
-
-               } else {
-
-                  iHighestSequence = max(
-                     unlist(
-                        sapply(
-                           lVariablesMetadata3[vcUpstreamVariables], 
-                           function(y) {
-                              y$iSequence
-                           }
-                        )
-                     ),
-                     na.rm = T
-                  )
-
-               }
-
-               iSequence = 1 + iHighestSequence
-            
-               lReturn = list(
-                  # VariableNumber = lVariablesMetadata3[[x]]$VariableNumber,
-                  cVariableName = lVariablesMetadata3[[x]]$cVariableName,
-                  # IsInput = lVariablesMetadata3[[x]]$IsInput,
-                  # Equation = lVariablesMetadata3[[x]]$Equation,
-                  vcUpstreamVariables = lVariablesMetadata3[[x]]$vcUpstreamVariables,
-                  iSequence = max(iSequence, lVariablesMetadata3[[x]]$iSequence)
-               )
-
-               lReturn
-
-            }
-         )
+      if ( bInferUpstreamVariables ) {
 
          cat(
-            file = cEvaluationOrderLocation,
-            'VariableName,Sequence'
+            file = stderr(),
+            paste(
+               Sys.time(),
+               'fValidateVariablesMetadata: what is this exactly?\n'
+            )
          )
 
-         lapply(
-            lVariablesMetadata2,
-            function(lVariableMetadata) {
-               
-               if ( length(lVariableMetadata$vcUpstreamVariables) > 0 ) {
+         # Step 1 of this function is calculating order of evaluation
+         # The logic is basically to find the currently assigned sequence of evaluation
+         # of all upstream variables, say x, and then assign x + 1 as the sequence of 
+         # evaluation to the variable itself. Iterate till no changes.
+         i = 0
 
-                  cat(
-                     file = cEvaluationOrderLocation,
-                     append = T,
-                     paste0(
-                        '\n',
-                        lVariableMetadata$vcUpstreamVariables,
-                        ',',
-                        lVariableMetadata$iSequence                        
-                     )
-                  )
+         lVariablesMetadata3 = lapply(
+            lVariablesMetadata,
+            function( lVariableMetadata ) {
 
-               }
+               list(
+                  # VariableNumber = lVariableMetadata[[x]]$VariableNumber,
+                  cVariableName = lVariableMetadata$cVariableName,
+                  # IsInput = lVariableMetadata[[x]]$IsInput,
+                  # Equation = lVariableMetadata[[x]]$Equation,
+                  vcUpstreamVariables = lVariableMetadata$vcUpstreamVariables,
+                  iSequence = lVariableMetadata$iSequence
+               )
+
             }
+
          )
+         
+         names(lVariablesMetadata3) = names(lVariablesMetadata)
 
-         names(lVariablesMetadata2) = names(lVariablesMetadata3)
+         repeat {
+               
+            lVariablesMetadata2 = lapply(
+               names(lVariablesMetadata3),
+               function(x) {
+                                 
+                  vcUpstreamVariables = unlist(lVariablesMetadata3[[x]]$vcUpstreamVariables)
 
-         if ( 
-            identical(lVariablesMetadata3, lVariablesMetadata2)
-         ) {
-            
-            rm(lVariablesMetadata2)
-            break
-         }
+                  if ( length(vcUpstreamVariables) == 0 ) {
 
-         # If there are cyclic conditions between variables then 
-         # the loop counter should go beyond the number of variables
-         # that are there.
-         if ( i >  length(lVariablesMetadata2) + 5 ) {
-
-            vcNotification = sapply(
-
-               lVariablesMetadata3,
-
-               function(lVariableMetadata) {
-
-                  if ( lVariableMetadata$iSequence > length(lVariablesMetadata2) ) {
-
-                     return ( lVariableMetadata$cVariableName )
+                     iHighestSequence = 0
 
                   } else {
-                     return ( NULL )
+
+                     iHighestSequence = max(
+                        unlist(
+                           sapply(
+                              lVariablesMetadata3[vcUpstreamVariables], 
+                              function(y) {
+                                 y$iSequence
+                              }
+                           )
+                        ),
+                        na.rm = T
+                     )
+
                   }
 
+                  iSequence = 1 + iHighestSequence
+               
+                  lReturn = list(
+                     # VariableNumber = lVariablesMetadata3[[x]]$VariableNumber,
+                     cVariableName = lVariablesMetadata3[[x]]$cVariableName,
+                     # IsInput = lVariablesMetadata3[[x]]$IsInput,
+                     # Equation = lVariablesMetadata3[[x]]$Equation,
+                     vcUpstreamVariables = lVariablesMetadata3[[x]]$vcUpstreamVariables,
+                     iSequence = max(iSequence, lVariablesMetadata3[[x]]$iSequence)
+                  )
+
+                  lReturn
+
                }
-
             )
 
-            lMainNotification = list(
-               cMessage = paste0(
-                  'Possible cyclic relation between: ',
-                  paste(vcNotification[!is.null(vcNotification)], collapse = ',')
-               ),
-               cType = 'error'
+            cat(
+               file = cEvaluationOrderLocation,
+               'VariableName,Sequence'
             )
 
-            return ( lMainNotification )
+            lapply(
+               lVariablesMetadata2,
+               function(lVariableMetadata) {
+                  
+                  if ( length(lVariableMetadata$vcUpstreamVariables) > 0 ) {
+
+                     cat(
+                        file = cEvaluationOrderLocation,
+                        append = T,
+                        paste0(
+                           '\n',
+                           lVariableMetadata$vcUpstreamVariables,
+                           ',',
+                           lVariableMetadata$iSequence                        
+                        )
+                     )
+
+                  }
+               }
+            )
+
+            names(lVariablesMetadata2) = names(lVariablesMetadata3)
+
+            if ( 
+               identical(lVariablesMetadata3, lVariablesMetadata2)
+            ) {
+               
+               rm(lVariablesMetadata2)
+               break
+            }
+
+            # If there are cyclic conditions between variables then 
+            # the loop counter should go beyond the number of variables
+            # that are there.
+            if ( i >  length(lVariablesMetadata2) + 5 ) {
+
+               vcNotification = sapply(
+
+                  lVariablesMetadata3,
+
+                  function(lVariableMetadata) {
+
+                     if ( lVariableMetadata$iSequence > length(lVariablesMetadata2) ) {
+
+                        return ( lVariableMetadata$cVariableName )
+
+                     } else {
+                        return ( NULL )
+                     }
+
+                  }
+
+               )
+
+               lMainNotification = list(
+                  cMessage = paste0(
+                     'Possible cyclic relation between: ',
+                     paste(vcNotification[!is.null(vcNotification)], collapse = ',')
+                  ),
+                  cType = 'error'
+               )
+
+               return ( lMainNotification )
+               
+            }
+
+            i = i + 1
+            
+            lVariablesMetadata3 = lVariablesMetadata2
+            gc()
             
          }
 
-         i = i + 1
+         dtEvaluationOrderLocation = fread(cEvaluationOrderLocation)
+         dtEvaluationOrderLocation = dtEvaluationOrderLocation[,
+            list(
+               Sequence = max(Sequence)
+            ),
+            VariableName
+         ]
+
+         # Assigning sequence number 
+         lVariablesMetadata = lapply(
+            names(lVariablesMetadata),
+            function ( cVariableListName ) {
          
-         lVariablesMetadata3 = lVariablesMetadata2
-         gc()
-         
+               lVariablesMetadata[[cVariableListName]]$iSequence = lVariablesMetadata3[[cVariableListName]]$iSequence
+               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = dtEvaluationOrderLocation[VariableName == cVariableListName,Sequence]
+               if ( is.null(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence)) {
+                  lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
+               }
+               if ( length(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence) == 0 ) {
+                  lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
+               }
+               lVariablesMetadata[[cVariableListName]]
+
+            }
+         )
+
+         rm(lVariablesMetadata3)
+
       }
-
-      dtEvaluationOrderLocation = fread(cEvaluationOrderLocation)
-      dtEvaluationOrderLocation = dtEvaluationOrderLocation[,
-         list(
-            Sequence = max(Sequence)
-         ),
-         VariableName
-      ]
-
-      # Assigning sequence number 
-      lVariablesMetadata = lapply(
-         names(lVariablesMetadata),
-         function ( cVariableListName ) {
-      
-            lVariablesMetadata[[cVariableListName]]$iSequence = lVariablesMetadata3[[cVariableListName]]$iSequence
-            lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = dtEvaluationOrderLocation[VariableName == cVariableListName,Sequence]
-            if ( is.null(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence)) {
-               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
-            }
-            if ( length(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence) == 0 ) {
-               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
-            }
-            lVariablesMetadata[[cVariableListName]]
-
-         }
-      )
-
-      rm(lVariablesMetadata3)
 
       return ( lVariablesMetadata )
 
@@ -1444,7 +1458,12 @@ function(input, output, session) {
 
                         if ( !dtVariableNameMapping[iRow, VariableNumber] %in% vcVariablesWhichAreConstant ) {
 
-                           bNeedsLoop = T
+                           # This was commented out on 4th March
+                           # Assuming I was playing it safe and any equation which wasn't
+                           # a constant would be evaluated in loop. You probably don't 
+                           # need to run a loop unless it is a function like pmax, rnorm, etc.
+
+                           # bNeedsLoop = T
 
                         }
 
@@ -1456,6 +1475,10 @@ function(input, output, session) {
                      pattern = cTempVariableString,
                      replacement = 'Variable'
                   )
+
+                  # print('cEquation 1474')
+                  # print(cEquation)
+
 
                   # @todo Should ensure that no function ever has an overlap with any of the variable names
                   # otherwise some equations will be unnecessarily be looped and not vectorised
@@ -1484,6 +1507,9 @@ function(input, output, session) {
                      )
 
                   }
+
+                  print('At evaluation')
+                  print(cEquation)
 
                   if ( bNeedsLoop ) {
 
@@ -1520,42 +1546,50 @@ function(input, output, session) {
                         bGiveIndependentVariables = F
                      )
 
-                     # Spearman's correlation
-                     vnCorrelations = sapply(
-                        # dtVariableDetails[Input == T, VariableName],
-                        viVariablesToMeasureSensitivityAgainst,
-                        function ( iVariableToMeasureSensitivityAgainst ) {
+                     if ( length(viVariablesToMeasureSensitivityAgainst) > 0 ) {
 
-                           cor(
-                              get(
-                                 paste0(
-                                    'Variable', 
-                                    iVariableToMeasureSensitivityAgainst
-                                 )
-                              ),
-                              vnDistribution
-                           )
-                           
-                        }
-                     )
-
-                     # This is what Crystal Ball is doing as contribution to variance :|
-                     # https://docs.oracle.com/cd/E12825_01/epm.111/cb_user/frameset.htm?ch07s04s03.html
-
-                     dtSensitivity = data.table(
-                        VariableName = sapply(
+                        # Spearman's correlation
+                        vnCorrelations = sapply(
+                           # dtVariableDetails[Input == T, VariableName],
                            viVariablesToMeasureSensitivityAgainst,
                            function ( iVariableToMeasureSensitivityAgainst ) {
-                              lVariablesMetadata[[iVariableToMeasureSensitivityAgainst]]$cVariableName
-                           }
-                        ),
-                        Correlations = vnCorrelations,
-                        VarianceContribution = vnCorrelations^2 / sum(vnCorrelations^2, na.rm = T)
-                     )
 
-                     dtSensitivity = dtSensitivity[
-                        rev(order(VarianceContribution))
-                     ]
+                              cor(
+                                 get(
+                                    paste0(
+                                       'Variable', 
+                                       iVariableToMeasureSensitivityAgainst
+                                    )
+                                 ),
+                                 vnDistribution
+                              )
+                              
+                           }
+                        )
+
+                        # This is what Crystal Ball is doing as contribution to variance :|
+                        # https://docs.oracle.com/cd/E12825_01/epm.111/cb_user/frameset.htm?ch07s04s03.html
+
+                        dtSensitivity = data.table(
+                           VariableName = sapply(
+                              viVariablesToMeasureSensitivityAgainst,
+                              function ( iVariableToMeasureSensitivityAgainst ) {
+                                 lVariablesMetadata[[iVariableToMeasureSensitivityAgainst]]$cVariableName
+                              }
+                           ),
+                           Correlations = vnCorrelations,
+                           VarianceContribution = vnCorrelations^2 / sum(vnCorrelations^2, na.rm = T)
+                        )
+
+                        dtSensitivity = dtSensitivity[
+                           rev(order(VarianceContribution))
+                        ]
+
+                     } else {
+
+                        dtSensitivity = data.table()
+
+                     }
 
                      lReactiveValues[[paste0('dtSensitivity', iVariableNumber)]] = dtSensitivity
 
@@ -1592,16 +1626,27 @@ function(input, output, session) {
                   function( lVariableMetadata2 ) {
                      
                      cReturn = NULL
-                     if ( lVariableMetadata2$iDeleteAfterSequence > lVariableMetadata$iSequence ) {
-                        cReturn = lVariableMetadata2$cVariableName
+                     if ( lVariableMetadata2$iDeleteAfterSequence == lVariableMetadata$iSequence ) {
+                        cReturn = lVariableMetadata2$iVariableNumber
                      }
                      cReturn
                   }
                )
 
                vcVariablesToDelete = unlist(vcVariablesToDelete)
+                  
                vcVariablesToDelete = vcVariablesToDelete[!is.null(vcVariablesToDelete)]
 
+               vcVariablesToDelete = paste0(
+                  'Variable',
+                  vcVariablesToDelete
+               )
+
+               vcVariablesToDelete = intersect(
+                  vcVariablesToDelete,
+                  ls()
+               )
+               
                if ( length(vcVariablesToDelete) > 0 ) {
                      
                   rm(
@@ -1655,6 +1700,7 @@ function(input, output, session) {
                      max(vnDistribution),
                      quantile(
                         vnDistribution, 
+                        vnQuantiles
                      ) 
                   )
                )
@@ -2184,6 +2230,11 @@ function(input, output, session) {
                   }
                )
             )
+            lVariableMetadata$iDeleteAfterSequence = max(
+               lVariableMetadata$iDeleteAfterSequence,
+               lVariableMetadata$iSequence
+            )
+            
             lVariableMetadata
          }
       )
@@ -2390,8 +2441,6 @@ function(input, output, session) {
 
    #    }
    # )
-   
-
 
    # Where it all happens
    observeEvent(
@@ -2546,14 +2595,20 @@ function(input, output, session) {
 
    # Since variable are being added, we need to dynamically handle them
    # https://gist.github.com/wch/5436415/
-   if ( isolate(input$checkboxLoadGUI) ) {
+   # if ( bLoadGUIOverride ) {
+   observe({
+         
+      # for ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
+      iVariableNumber = lReactiveValues$iTotalVariables
       
-      for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
-
+      # removed the check on loadgui. Might as well create it. If the element
+      # isn't displayed, it won't get updated anyway.
+      if ( !is.null(iVariableNumber) ) {
+      # if ( !is.null(iVariableNumber) & isolate(input$checkboxLoadGUI) ) {
+         
          local({
 
             iLocalVariableNumber = iVariableNumber
-
 
             # VariableDistributionChartPDF
             output[[paste0('VariableDistributionChartPDF', iLocalVariableNumber)]] = renderPlot({
@@ -2699,8 +2754,8 @@ function(input, output, session) {
          })
 
       }
-   
-   }
+
+   })
 
 
    # To show notifications, I basically show a pop up
@@ -2779,7 +2834,7 @@ function(input, output, session) {
                fRetrieveShinyValue(
                   input = lReactiveValues,
                   id = 'EmpiricalDataName',
-                  vcSuffixes = 1:iRandomlyLargeNumberForEmpirical
+                  vcSuffixes = 1:isolate(lReactiveValues$iTotalEmpiricals)
                )
             }
          )
@@ -3319,28 +3374,25 @@ function(input, output, session) {
 
             }
 
-         }
+            # Getting the empirical distributions
+            vcEmpiricalDistributionNames = isolate(
+               {
+                  fRetrieveShinyValue(
+                     input = isolate(lReactiveValues),
+                     id = 'EmpiricalDataName',
+                     vcSuffixes = 1:isolate(lReactiveValues$iTotalEmpiricals)
+                  )
+               }
+            )
 
-         # Getting the empirical distributions
-         vcEmpiricalDistributionNames = isolate(
-            {
-               fRetrieveShinyValue(
-                  input = isolate(lReactiveValues),
-                  id = 'EmpiricalDataName',
-                  vcSuffixes = 1:iRandomlyLargeNumberForEmpirical
-               )
-            }
-         )
+            vcEmpiricalDistributionNames = vcEmpiricalDistributionNames[
+               !is.null(vcEmpiricalDistributionNames)
+            ]
 
-         vcEmpiricalDistributionNames = vcEmpiricalDistributionNames[
-            !is.null(vcEmpiricalDistributionNames)
-         ]
+            vcEmpiricalDistributionNames = vcEmpiricalDistributionNames[
+               !is.na(vcEmpiricalDistributionNames)
+            ]
 
-         vcEmpiricalDistributionNames = vcEmpiricalDistributionNames[
-            !is.na(vcEmpiricalDistributionNames)
-         ]
-
-         if ( isolate(input$checkboxLoadGUI) ) {
 
             # Adding UI for each new variable
             for ( iVariableNumber in seq(length(lVariablesMetadata))) {
@@ -3555,8 +3607,7 @@ function(input, output, session) {
       }
    )
 
-
-   # Generate charts for the empirircal distributions
+   # Generate chart reactive chunks for the empirircal distributions
    for  ( iVariableNumber in seq(iRandomlyLargeNumberForEmpirical) ) {
 
       local({
@@ -3682,22 +3733,32 @@ function(input, output, session) {
    observe(
       {
 
-         vcEmpiricalDistributionNames = fRetrieveShinyValue(
-            input = lReactiveValues,
-            id = 'EmpiricalDataName',
-            vcSuffixes = 1:iRandomlyLargeNumberForEmpirical
-         )
+         if ( input$checkboxLoadGUI == T ) {
 
-         for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
+            iTotalEmpiricals = lReactiveValues$iTotalEmpiricals
 
-            updateSelectizeInput(
-               session = session,
-               inputId = paste0(
-                  "ChosenEmpiricalDistribution", 
-                  iVariableNumber
-               ),
-               choices = vcEmpiricalDistributionNames
-            )
+            if ( iTotalEmpiricals > 0 ) {
+
+               vcEmpiricalDistributionNames = fRetrieveShinyValue(
+                  input = lReactiveValues,
+                  id = 'EmpiricalDataName',
+                  vcSuffixes = 1:iTotalEmpiricals
+               )
+
+               for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
+
+                  updateSelectizeInput(
+                     session = session,
+                     inputId = paste0(
+                        "ChosenEmpiricalDistribution", 
+                        iVariableNumber
+                     ),
+                     choices = vcEmpiricalDistributionNames
+                  )
+
+               }
+
+            }
 
          }
 

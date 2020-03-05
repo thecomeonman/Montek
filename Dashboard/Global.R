@@ -36,13 +36,13 @@ lArchitectureParms$cAtherDataLocation = ifelse(
 # The number of variables that a user is allowed to add
 # You can increase this, if you wish. This is the number of placeholders for
 # variables that get created so a smaller number is more efficient.
-iRandomlyLargeNumberForVariables = 299
+iRandomlyLargeNumberForVariables = 100000
 
 # The number of empirical distributions that a user is allowed to add
 # You can increase this, if you wish. This is the number of placeholders for
 # empirical distributions that get created so a smaller number is more 
 # efficient.
-iRandomlyLargeNumberForEmpirical = 99
+iRandomlyLargeNumberForEmpirical = 1000
 
 # The operations that a user is allowed. It has four columns: 
 # Operator, OperatorString, Usage, and Description. Except for OperatorString, 
