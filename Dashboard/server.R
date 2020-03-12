@@ -1,9 +1,7 @@
-
 function(input, output, session) {
 
-   bInferUpstreamVariables = T
-   bLoadGUIOverride = F
-
+   bInferUpstreamVariables = F
+      
    #' Function to generate uniform distribution
    #' @param iIterations The number of values to generate
    #' @param nLowerBound The lower limit of values to look at
@@ -62,7 +60,8 @@ function(input, output, session) {
    #' @return A data.table with one row for each variable with its front-end
    #' name and its back-end name
    fMapVariableNames = function (
-      lVariablesMetadata
+      lVariablesMetadata,
+      cTempVariableString
    ) {
 
       rbindlist(
@@ -532,7 +531,10 @@ function(input, output, session) {
             lVariableMetadata$cVariableName
          }
       )
-      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
+      dtVariableNameMapping = fMapVariableNames(
+         lVariablesMetadata,
+         cTempVariableString = cTempVariableString
+      )  
 
       # Step 1 of this function is validating the structure
 
@@ -1005,7 +1007,6 @@ function(input, output, session) {
                Sys.time(),
                'fValidateVariablesMetadata: missing equations\n'
             )
-
          )
 
          # Check for missing equations
@@ -1060,7 +1061,7 @@ function(input, output, session) {
 
       }
 
-      if ( bInferUpstreamVariables ) {
+      if ( F & bInferUpstreamVariables ) {
 
          cat(
             file = stderr(),
@@ -1247,6 +1248,128 @@ function(input, output, session) {
 
       }
 
+      
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            'fValidateVariablesMetadata: Evaluation and deletction sequence calculation\n'
+         )
+      )
+     
+      dtVariableSequence = rbindlist(
+         lapply(
+            lVariablesMetadata,
+            function( lVariableMetadata ) {
+               
+               data.table(
+                  VariableNumber = lVariableMetadata$iVariableNumber,
+                  VariableName = lVariableMetadata$cVariableName,
+                  UpstreamVariables = if ( length(lVariableMetadata$vcUpstreamVariables) == 0 ) {
+                     NA
+                  } else {
+                     lVariableMetadata$vcUpstreamVariables
+                  }
+               )
+               
+            }
+         )
+      )
+
+      dtVariableSequence[is.na(UpstreamVariables), Sequence := 1]
+      iVariablesLeft = dtVariableSequence[, (is.na(Sequence)[1]), VariableNumber][, sum(V1)]
+
+      repeat {
+         
+         dtVariableSequence = merge(
+            dtVariableSequence,
+            dtVariableSequence[!is.na(Sequence), list(UpstreamSequence = Sequence[1]), list(UpstreamVariables = VariableName)],
+            'UpstreamVariables',
+            all.x = T
+         )
+         
+         # There is no na.rm deliberately so that variables which haven't had
+         # all the upstream variables covered get NA in sequence
+         dtVariableSequence[
+            is.na(Sequence),
+            Sequence := max(UpstreamSequence) + 1,
+            VariableNumber
+         ]
+         
+         dtVariableSequence[, UpstreamSequence := NULL]
+         
+         if ( dtVariableSequence[, all(!is.na(Sequence))] ) {
+            break
+         } else {
+            
+            if ( 
+               iVariablesLeft == dtVariableSequence[, (is.na(Sequence)[1]), VariableNumber][, sum(V1)]
+            ) {
+               stop('Unable to generate sequence.')
+            }
+
+            iVariablesLeft = dtVariableSequence[, (is.na(Sequence)[1]), VariableNumber][, sum(V1)]
+
+            # print(dtVariableSequence[, max(Sequence, na.rm = T)])
+            # print(dtVariableSequence[, (is.na(Sequence)[1]), VariableNumber][, sum(V1)])
+         }
+         
+      }
+
+      qwe = merge(
+         dtVariableSequence[,
+            list(
+               Sequence = Sequence[1]
+            ),
+            list(
+               VariableName,
+               VariableNumber
+            )
+         ],
+         dtVariableSequence[,
+            list(
+               DeleteAfterSequence = max(Sequence)
+            ),
+            list(
+               VariableName = UpstreamVariables
+            )
+         ],
+         'VariableName',
+         all.x = T
+      )
+      qwe[is.na(DeleteAfterSequence), DeleteAfterSequence := Sequence]
+      qwe = qwe[order(VariableNumber)]
+      setkey(
+         qwe,
+         VariableNumber
+      )
+
+      lVariablesMetadata = lapply(
+         lVariablesMetadata,
+         function ( lVariableMetadata ) {
+            
+            dtTemp = qwe[VariableNumber == lVariableMetadata$iVariableNumber]
+            
+            lVariableMetadata$iSequence = dtTemp[, Sequence]
+            
+            lVariableMetadata$iDeleteAfterSequence = dtTemp[, DeleteAfterSequence]
+            
+            lVariableMetadata
+            
+         }
+      )
+
+
+      cat(
+         file = stderr(),
+         paste(
+            Sys.time(),
+            'fValidateVariablesMetadata: End\n'
+         )
+      )
+     
+
+
       return ( lVariablesMetadata )
 
    }
@@ -1272,7 +1395,9 @@ function(input, output, session) {
          )
       )
 
-      if ( bStoreResults ) {
+      bTooManyVariablesForRAM = length(lVariablesMetadata) > 5
+
+      if ( bStoreResults | bTooManyVariablesForRAM ) {
 
          file.remove(
             list.files(
@@ -1295,7 +1420,27 @@ function(input, output, session) {
 
       # We will convert the variable names to some safe names in the back end
       # to prevent mischief through sudo rm -rf level variable names
-      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata) 
+      dtVariableNameMapping = fMapVariableNames(
+         lVariablesMetadata,
+         cTempVariableString
+      ) 
+
+      dtVariablesDeleteAfterSequence = rbindlist(lapply(
+         lVariablesMetadata,
+         function( lVariableMetadata ) {
+                        
+            data.table(
+               VariableNumber = lVariableMetadata$iVariableNumber,
+               DeleteAfterSequence = lVariableMetadata$iDeleteAfterSequence
+            )
+
+         }
+      ))
+
+      setkey(
+         dtVariablesDeleteAfterSequence,
+         DeleteAfterSequence
+      )
 
       # Getting the order of evaluation
       vcEvaluationOrder = c(1:length(lVariablesMetadata))[
@@ -1315,7 +1460,7 @@ function(input, output, session) {
       # order variable names in decreasing order of length.
       # this is to avoid tragedies whereone variable name containts another
       dtVariableNameMapping[, NameLength := -nchar(VariableName)]
-      setkey(dtVariableNameMapping, NameLength)
+      setorder(dtVariableNameMapping, NameLength)
 
       lReactiveValuesPlaceholder = list()
 
@@ -1445,29 +1590,112 @@ function(input, output, session) {
 
                   # Get all the variable names replaced with backend names
                   # To avoid some smart alec doing things like system('rm -rf')
-                  for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
+                  if ( length(lVariableMetadata$vcUpstreamVariables) > 0 ) {
 
-                     cOriginalEquation = cEquation
-                     cEquation = gsub(
-                        x = cEquation,
-                        pattern = dtVariableNameMapping[iRow, VariableName],
-                        replacement = dtVariableNameMapping[iRow, paste0(VariableBackEndName,'[iIndex]')]
+                     vcUpstreamVariables = lVariableMetadata$vcUpstreamVariables[
+                        order(
+                           -nchar(
+                              lVariableMetadata$vcUpstreamVariables
+                           )
+                        )
+                     ]
+                     
+                     setkey(
+                        dtVariableNameMapping,
+                        VariableName
                      )
 
-                     if ( cOriginalEquation != cEquation ) {
+                     # print('vcUpstreamVariables')
+                     # print(vcUpstreamVariables)
+                        
+                     for ( cUpstreamVariableName in vcUpstreamVariables ) {
 
-                        if ( !dtVariableNameMapping[iRow, VariableNumber] %in% vcVariablesWhichAreConstant ) {
+                        # print('cUpstreamVariableName')
+                        # print(cUpstreamVariableName)
 
-                           # This was commented out on 4th March
-                           # Assuming I was playing it safe and any equation which wasn't
-                           # a constant would be evaluated in loop. You probably don't 
-                           # need to run a loop unless it is a function like pmax, rnorm, etc.
+                        # print(
+                        #    exists(
+                        #       dtVariableNameMapping[
+                        #          VariableName == cUpstreamVariableName, 
+                        #          paste0('Variable', VariableNumber)
+                        #       ]
+                        #    )
+                        # )
 
-                           # bNeedsLoop = T
+                        # print(
+                        #    dtVariableNameMapping[
+                        #       VariableName == cUpstreamVariableName, 
+                        #       paste0(VariableBackEndName,'[iIndex]')
+                        #    ]
+                        # )
+
+                        cOriginalEquation = cEquation
+                        cEquation = gsub(
+                           x = cEquation,
+                           pattern = cUpstreamVariableName,
+                           replacement = dtVariableNameMapping[
+                              VariableName == cUpstreamVariableName, 
+                              paste0(VariableBackEndName,'[iIndex]')
+                           ]
+                        )
+
+                        # print('cEquation')
+                        # print(cEquation)
+
+                        if ( bTooManyVariablesForRAM ) { 
+
+                           lVariableMetadataCopy = copy(lVariableMetadata)
+
+                           load(
+                              paste0(
+                                 cResultsStorageLocation, '/',
+                                 dtVariableNameMapping[
+                                    VariableName == cUpstreamVariableName,
+                                    VariableNumber
+                                 ],
+                                 '.Rdata'
+                              )
+                           )
+
+                           assign(
+                              paste0(
+                                 'Variable', 
+                                 dtVariableNameMapping[
+                                    VariableName == cUpstreamVariableName,
+                                    VariableNumber
+                                 ]
+                              ),
+                              vnDistribution
+                           )
+
+                           lVariableMetadata = lVariableMetadataCopy
+                           rm(lVariableMetadataCopy)
 
                         }
 
+                        if ( cOriginalEquation != cEquation ) {
+
+                           if ( 
+                              !dtVariableNameMapping[
+                                 VariableName == cUpstreamVariableName, 
+                                 VariableNumber
+                              ] %in% vcVariablesWhichAreConstant
+                           ) {
+
+                              # This was commented out on 4th March
+                              # Assuming I was playing it safe and any equation which wasn't
+                              # a constant would be evaluated in loop. You probably don't 
+                              # need to run a loop unless it is a function like pmax, rnorm, etc.
+
+                              # bNeedsLoop = T
+
+                           }
+
+                        }
+
+
                      }
+
                   }
 
                   cEquation = gsub(
@@ -1508,8 +1736,8 @@ function(input, output, session) {
 
                   }
 
-                  print('At evaluation')
-                  print(cEquation)
+                  # print('At evaluation')
+                  # print(cEquation)
 
                   if ( bNeedsLoop ) {
 
@@ -1531,6 +1759,20 @@ function(input, output, session) {
                            iIterations
                         )
                      }
+
+                  }
+
+                  if ( bTooManyVariablesForRAM ) {
+
+                     rm(
+                        list = paste0(
+                           'Variable',
+                           dtVariableNameMapping[
+                              VariableName %in% vcUpstreamVariables,
+                              VariableNumber
+                           ]
+                        )
+                     )
 
                   }
 
@@ -1603,7 +1845,7 @@ function(input, output, session) {
                # unnamed vector
                vnDistribution = c(unlist(vnDistribution))
 
-               if ( bStoreResults ) {
+               if ( bStoreResults | bTooManyVariablesForRAM ) {
 
                   save(
                      list = c('lVariableMetadata','vnDistribution'),
@@ -1616,53 +1858,62 @@ function(input, output, session) {
                   
                }
 
-               assign(
-                  paste0('Variable', iVariableNumber),
-                  vnDistribution
-               )
+               if ( !bTooManyVariablesForRAM ) {
 
-               vcVariablesToDelete = sapply(
-                  lVariablesMetadata,
-                  function( lVariableMetadata2 ) {
-                     
-                     cReturn = NULL
-                     if ( lVariableMetadata2$iDeleteAfterSequence == lVariableMetadata$iSequence ) {
-                        cReturn = lVariableMetadata2$iVariableNumber
-                     }
-                     cReturn
-                  }
-               )
-
-               vcVariablesToDelete = unlist(vcVariablesToDelete)
-                  
-               vcVariablesToDelete = vcVariablesToDelete[!is.null(vcVariablesToDelete)]
-
-               vcVariablesToDelete = paste0(
-                  'Variable',
-                  vcVariablesToDelete
-               )
-
-               vcVariablesToDelete = intersect(
-                  vcVariablesToDelete,
-                  ls()
-               )
-               
-               if ( length(vcVariablesToDelete) > 0 ) {
-                     
-                  rm(
-                     list = vcVariablesToDelete
+                  assign(
+                     paste0('Variable', iVariableNumber),
+                     vnDistribution
                   )
+
+                  vcVariablesToDelete = dtVariablesDeleteAfterSequence[
+                     DeleteAfterSequence == lVariableMetadata$iSequence - 1,
+                     VariableNumber
+                  ]
+
+                  # print('ls()')
+                  # print(
+                  #    grep(
+                  #       ls(),
+                  #       pattern = '^Variable',
+                  #       value = T
+                  #    )
+                  # )
+                  
+                  if ( length(vcVariablesToDelete) > 0 ) {
+
+                     vcVariablesToDelete = paste0(
+                        'Variable',
+                        vcVariablesToDelete
+                     )
+
+                     vcVariablesToDelete = intersect(
+                        vcVariablesToDelete,
+                        ls()
+                     )
+
+                     # print('vcVariablesToDelete')
+                     # print(vcVariablesToDelete)
+                        
+                     rm(
+                        list = vcVariablesToDelete
+                     )
+
+                     dtVariablesDeleteAfterSequence = dtVariablesDeleteAfterSequence[
+                        DeleteAfterSequence != lVariableMetadata$iSequence
+                     ]
+
+                  }
 
                }
 
-               cat(
-                  file = stderr(),
-                  paste(
-                     Sys.time(),
-                     'fEvaluateVariables: Preparing summaries',
-                     '\n'
-                  )
-               )
+               # cat(
+               #    file = stderr(),
+               #    paste(
+               #       Sys.time(),
+               #       'fEvaluateVariables: Preparing summaries',
+               #       '\n'
+               #    )
+               # )
 
                # Don't need to store this. Saves lots of memory.
                # lReactiveValuesPlaceholder[[paste0('Distribution', iVariableNumber)]] = vnDistribution
@@ -1672,14 +1923,15 @@ function(input, output, session) {
                   vnDistribution
                )
                
-               cat(
-                  file = stderr(),
-                  paste(
-                     Sys.time(),
-                     'fEvaluateVariables: PDFs done',
-                     '\n'
-                  )
-               )
+               # cat(
+               #    file = stderr(),
+               #    paste(
+               #       Sys.time(),
+               #       'fEvaluateVariables: PDFs done',
+               #       '\n'
+               #    )
+               # )
+
                lReactiveValuesPlaceholder[[paste0('dtDistribution', iVariableNumber)]] = dtDistribution
 
                # Qunatiles, means, etc.
@@ -1705,14 +1957,14 @@ function(input, output, session) {
                   )
                )
                               
-               cat(
-                  file = stderr(),
-                  paste(
-                     Sys.time(),
-                     'fEvaluateVariables: Percentiles done',
-                     '\n'
-                  )
-               )
+               # cat(
+               #    file = stderr(),
+               #    paste(
+               #       Sys.time(),
+               #       'fEvaluateVariables: Percentiles done',
+               #       '\n'
+               #    )
+               # )
 
                lReactiveValues[[paste0('dtVariableSummary', iVariableNumber)]] = dtVariableSummary
 
@@ -1727,14 +1979,14 @@ function(input, output, session) {
 
                }
                               
-               cat(
-                  file = stderr(),
-                  paste(
-                     Sys.time(),
-                     'fEvaluateVariables: Summary done',
-                     '\n'
-                  )
-               )
+               # cat(
+               #    file = stderr(),
+               #    paste(
+               #       Sys.time(),
+               #       'fEvaluateVariables: Summary done',
+               #       '\n'
+               #    )
+               # )
 
                # save(
                #    list = paste0('Variable', iVariableNumber), 
@@ -1816,6 +2068,7 @@ function(input, output, session) {
       lVariablesMetadata
    ) {
 
+      # Trying to figure out what variables are dependent on what other variables
       cat(
          file = stderr(),
          paste(
@@ -1827,11 +2080,13 @@ function(input, output, session) {
 
       )      
          
-      # Trying to figure out what variables are dependent on what other variables
-      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)
+      dtVariableNameMapping = fMapVariableNames(
+         lVariablesMetadata,
+         cTempVariableString
+      )
       
-      # sorting the list of variables in order of name so that if one variable
-      # name is used inside another variable name then that doesn't cause problems
+      # sorting the list of variables in order of characters in the name so that if one
+      # variable name is used inside another variable name then that doesn't cause problems
       #' @todo this seems to be duplicated with the validation. maybe try and reuse.   
       dtVariableNameMapping[, NameLength := -nchar(VariableName)]
       setkey(dtVariableNameMapping, NameLength)
@@ -2505,7 +2760,10 @@ function(input, output, session) {
       }
 
       # Trying to figure out what variables are dependent on what other variables
-      dtVariableNameMapping = fMapVariableNames(lVariablesMetadata)  
+      dtVariableNameMapping = fMapVariableNames(
+         lVariablesMetadata,
+         cTempVariableString
+      )  
 
       if ( bInferUpstreamVariables ) {
 
@@ -2531,7 +2789,14 @@ function(input, output, session) {
       if ( isolate(input$checkboxValidations)) {
 
          progress$set(
-            message = 'Run: Basic checks'
+            message = paste0(
+               'Run: Basic checks',
+               if ( length(lVariablesMetadata) > 100 ) {
+                  '\nLooks like there are a lot of variables in your sim. This will take some time.'
+               } else {
+                  ''
+               }
+            )
          )
 
          # Validations
@@ -2561,7 +2826,15 @@ function(input, output, session) {
       )
 
       progress$set(
-         message = 'Run: Evaluating'
+         message = 
+         paste0(
+            'Run: Evaluating',
+            if ( length(lVariablesMetadata) > 100 ) {
+               '\nLooks like there are a lot of variables in your sim. This will take some time.'
+            } else {
+               ''
+            }
+         )
       )
 
       # Evaluation
@@ -2595,7 +2868,6 @@ function(input, output, session) {
 
    # Since variable are being added, we need to dynamically handle them
    # https://gist.github.com/wch/5436415/
-   # if ( bLoadGUIOverride ) {
    observe({
          
       # for ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
@@ -3745,7 +4017,7 @@ function(input, output, session) {
                   vcSuffixes = 1:iTotalEmpiricals
                )
 
-               for  ( iVariableNumber in seq(iRandomlyLargeNumberForVariables) ) {
+               for  ( iVariableNumber in seq(isolate(lReactiveValues$iTotalVariables)) ) {
 
                   updateSelectizeInput(
                      session = session,

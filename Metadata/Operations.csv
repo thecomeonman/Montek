@@ -2,6 +2,7 @@ Operator;OperatorString;Usage;Description;Vectorised;MandatoryArguments;DefaultA
 +;\+;a+b;Addition;T;;
 *;\*;a*b;Multiplication;T;;
 -;-;a-b;Subtraction;T;;
+%/%;%/%;a%/%b;Quotient, 10 %/% 3 will return 3;T;;
 /;/;a/b;Division;T;;
 ^;\^;a^b;Power / exponent;T;;
 ";";";";;For use within other functions;T;;
