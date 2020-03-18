@@ -1227,22 +1227,20 @@ function(input, output, session) {
          ]
 
          # Assigning sequence number 
-         lVariablesMetadata = lapply(
-            names(lVariablesMetadata),
-            function ( cVariableListName ) {
          
-               lVariablesMetadata[[cVariableListName]]$iSequence = lVariablesMetadata3[[cVariableListName]]$iSequence
-               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = dtEvaluationOrderLocation[VariableName == cVariableListName,Sequence]
-               if ( is.null(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence)) {
-                  lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
-               }
-               if ( length(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence) == 0 ) {
-                  lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
-               }
-               lVariablesMetadata[[cVariableListName]]
-
+         
+         for ( cVariableListName in names(lVariablesMetadata) ) {
+         
+            lVariablesMetadata[[cVariableListName]]$iSequence = lVariablesMetadata3[[cVariableListName]]$iSequence
+            lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = dtEvaluationOrderLocation[VariableName == cVariableListName,Sequence]
+            if ( is.null(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence)) {
+               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
             }
-         )
+            if ( length(lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence) == 0 ) {
+               lVariablesMetadata[[cVariableListName]]$iDeleteAfterSequence = 1
+            }
+
+         }
 
          rm(lVariablesMetadata3)
 
@@ -1344,20 +1342,19 @@ function(input, output, session) {
          VariableNumber
       )
 
-      lVariablesMetadata = lapply(
-         lVariablesMetadata,
-         function ( lVariableMetadata ) {
+      for ( iVariableMetadataIndex in seq(length(lVariablesMetadata)) ) {
+
+         lVariableMetadata = lVariablesMetadata[[iVariableMetadataIndex]]
+
+         dtTemp = qwe[VariableNumber == lVariableMetadata$iVariableNumber]
+         
+         lVariableMetadata$iSequence = dtTemp[, Sequence]
+         
+         lVariableMetadata$iDeleteAfterSequence = dtTemp[, DeleteAfterSequence]
+         
+         lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata
             
-            dtTemp = qwe[VariableNumber == lVariableMetadata$iVariableNumber]
-            
-            lVariableMetadata$iSequence = dtTemp[, Sequence]
-            
-            lVariableMetadata$iDeleteAfterSequence = dtTemp[, DeleteAfterSequence]
-            
-            lVariableMetadata
-            
-         }
-      )
+      }
 
 
       cat(
@@ -2092,62 +2089,61 @@ function(input, output, session) {
       setkey(dtVariableNameMapping, NameLength)
       
 
-      lVariablesMetadata = lapply(
-         lVariablesMetadata,
-         function(lVariableMetadata) {
+      for ( iVariableMetadataIndex in seq(length(lVariablesMetadata ))) {
 
-            cat(
-               file = stderr(),
-               paste(
-                  Sys.time(),
-                  '\nfInferUpstreamVariables:',
-                  lVariableMetadata$cVariableName,
-                  '\n'
-               )
+         lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata
 
+         cat(
+            file = stderr(),
+            paste(
+               Sys.time(),
+               '\nfInferUpstreamVariables:',
+               lVariableMetadata$cVariableName,
+               '\n'
             )
 
-            # Removing operators and variable names
-            cEquation = lVariableMetadata$cEquation
+         )
 
-            vcUpstreamVariables = c()
+         # Removing operators and variable names
+         cEquation = lVariableMetadata$cEquation
 
-            if ( !is.null(cEquation) ) {
+         vcUpstreamVariables = c()
 
-               for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
+         if ( !is.null(cEquation) ) {
 
-                  if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
+            for ( iRow in seq(nrow(dtVariableNameMapping)) ) {
 
-                     cNewEquation = gsub(
-                        x = cEquation,
-                        pattern = dtVariableNameMapping[iRow, VariableName],
-                        replacement = dtVariableNameMapping[iRow, VariableBackEndName]
+               if ( !dtVariableNameMapping[iRow, VariableName] == lVariableMetadata$cVariableName ) {
+
+                  cNewEquation = gsub(
+                     x = cEquation,
+                     pattern = dtVariableNameMapping[iRow, VariableName],
+                     replacement = dtVariableNameMapping[iRow, VariableBackEndName]
+                  )
+
+                  if ( cNewEquation != cEquation ) {
+
+                     cEquation = cNewEquation
+                     vcUpstreamVariables = c(
+                        vcUpstreamVariables,
+                        dtVariableNameMapping[iRow, VariableName]
                      )
-
-                     if ( cNewEquation != cEquation ) {
-
-                        cEquation = cNewEquation
-                        vcUpstreamVariables = c(
-                           vcUpstreamVariables,
-                           dtVariableNameMapping[iRow, VariableName]
-                        )
-
-                     }
 
                   }
 
                }
 
-
             }
 
-            # Artifact of strsplit
-            lVariableMetadata$vcUpstreamVariables = vcUpstreamVariables
-
-            lVariableMetadata
 
          }
-      )
+
+         # Artifact of strsplit
+         lVariableMetadata$vcUpstreamVariables = vcUpstreamVariables
+
+         lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata
+
+      }
 
       return (lVariablesMetadata)
 
@@ -2453,51 +2449,6 @@ function(input, output, session) {
 
    }
 
-   fOrderOfDeletion = function(
-      lVariablesMetadata
-   ) {
-
-      lVariablesMetadata = lapply(
-         lVariablesMetadata,
-         function ( lVariableMetadata ) {
-            
-            lVariableMetadata$iDeleteAfterSequence = max(
-               sapply(
-                  lVariablesMetadata,
-                  function ( lVariableMetadata2 ) {
-                     
-                     iSequence = 0
-                     
-                     if (
-                        !is.null(lVariableMetadata2$vcUpstreamVariables)
-                     ) {
-                           
-                        if ( 
-                           lVariableMetadata$cVariableName %in% lVariableMetadata2$vcUpstreamVariables
-                        ) {
-                           iSequence = lVariableMetadata2$iSequence
-                        }
-
-                     }
-
-                     iSequence
-
-                  }
-               )
-            )
-            lVariableMetadata$iDeleteAfterSequence = max(
-               lVariableMetadata$iDeleteAfterSequence,
-               lVariableMetadata$iSequence
-            )
-            
-            lVariableMetadata
-         }
-      )
-
-      lVariablesMetadata
-
-   }
-
    # UI Panel which contains the rows for the variables
    # On uploading a template, this thing is deleted and reinsterted
    uiPanelToAddVariables = wellPanel(
@@ -2773,9 +2724,6 @@ function(input, output, session) {
 
       }
 
-      # lVariablesMetadata = fOrderOfDeletion(
-      #    lVariablesMetadata
-      # )
       
       cat(
          file = stderr(),
@@ -3514,25 +3462,23 @@ function(input, output, session) {
                lVariablesMetadata = rjson::fromJSON(paste(lVariablesMetadata, collapse = ''))
 
                # initialising the other metadata ( which is optional )
-               lVariablesMetadata = lapply(
-                  seq(length(lVariablesMetadata)),
-                  function( iIndex ) {
 
-                     lVariableMetadata = lVariablesMetadata[[iIndex]]
+               for ( iVariableMetadataIndex in seq(length(lVariablesMetadata)) ) {
 
-                     lVariableMetadata = append(
-                        lVariableMetadata,
-                        list(
-                           iSequence = 1, 
-                           bIsInput = is.null(lVariableMetadata$cEquation), 
-                           iVariableNumber = iIndex
-                        )
+                  lVariableMetadata = lVariablesMetadata[[iVariableMetadataIndex]]
+
+                  lVariableMetadata = append(
+                     lVariableMetadata,
+                     list(
+                        iSequence = 1, 
+                        bIsInput = is.null(lVariableMetadata$cEquation), 
+                        iVariableNumber = iVariableMetadataIndex
                      )
+                  )
 
-                     return ( lVariableMetadata )
+                  lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata                     
 
-                  }
-               )
+               }
 
                cat(
                   file = stderr(),
@@ -3551,9 +3497,6 @@ function(input, output, session) {
 
                }
 
-               # lVariablesMetadata = fOrderOfDeletion(
-               #    lVariablesMetadata
-               # )               
 
                cat(
                   file = stderr(),
