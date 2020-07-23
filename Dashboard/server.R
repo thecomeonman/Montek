@@ -1,7 +1,5 @@
 function(input, output, session) {
 
-   bInferUpstreamVariables = F
-      
    #' Function to generate uniform distribution
    #' @param iIterations The number of values to generate
    #' @param nLowerBound The lower limit of values to look at
@@ -512,7 +510,8 @@ function(input, output, session) {
    fValidateVariablesMetadata = function (
       input,
       lVariablesMetadata,
-      dtAllowedOperations
+      dtAllowedOperations,
+      bCheckboxInferUpstreamVariables = T
    ) {
 
       cat(
@@ -1061,7 +1060,7 @@ function(input, output, session) {
 
       }
 
-      if ( F & bInferUpstreamVariables ) {
+      if ( F & bCheckboxInferUpstreamVariables ) {
 
          cat(
             file = stderr(),
@@ -2091,7 +2090,8 @@ function(input, output, session) {
 
       for ( iVariableMetadataIndex in seq(length(lVariablesMetadata ))) {
 
-         lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata
+        #  lVariablesMetadata[[iVariableMetadataIndex]] = lVariableMetadata
+         lVariableMetadata = lVariablesMetadata[[iVariableMetadataIndex]]
 
          cat(
             file = stderr(),
@@ -2716,7 +2716,7 @@ function(input, output, session) {
          cTempVariableString
       )  
 
-      if ( bInferUpstreamVariables ) {
+      if ( isolate(input$checkboxInferUpstreamVariables) ) {
 
          lVariablesMetadata = fInferUpstreamVariables(
             lVariablesMetadata
@@ -3489,7 +3489,7 @@ function(input, output, session) {
 
                )
 
-               if ( bInferUpstreamVariables ) {
+               if ( isolate(input$checkboxInferUpstreamVariables) ) {
 
                   lVariablesMetadata = fInferUpstreamVariables(
                      lVariablesMetadata
@@ -3509,7 +3509,8 @@ function(input, output, session) {
                lVariablesMetadata = fValidateVariablesMetadata(
                   input = input,
                   lVariablesMetadata = lVariablesMetadata,
-                  dtAllowedOperations = dtAllowedOperations
+                  dtAllowedOperations = dtAllowedOperations,
+                  bCheckboxInferUpstreamVariables = isolate(input$checkboxInferUpstreamVariables)
                )
 
                cat(

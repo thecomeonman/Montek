@@ -109,6 +109,7 @@ body = dashboardBody(
                      checkboxInput("checkboxLoadGUI", "Load variable GUI?", TRUE),
                      checkboxInput("checkboxLoadCorrelations", "Calculate correlations?", TRUE),
                      checkboxInput("checkboxValidations", "Validate before run?", TRUE),
+                     checkboxInput("checkboxInferUpstreamVariables", "Infer upstream variables?", TRUE),
                      checkboxInput("checkboxStoreLastResult", "Store last run values?", TRUE)
                   )
                ),
