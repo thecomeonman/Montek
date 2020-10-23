@@ -52,7 +52,7 @@ iRandomlyLargeNumberForEmpirical = 1000
 dtAllowedOperations = fread(
    paste0(
       lArchitectureParms$cRootDirectory,
-      '/Rhyhorn/Metadata/Operations.csv'
+      '/Montek/Metadata/Operations.csv'
    ),
    sep = ';'
 )
@@ -66,7 +66,7 @@ dtAllowedOperations = dtAllowedOperations[rev(order(nchar(Operator)))]
 source(
    paste0(
       lArchitectureParms$cRootDirectory,
-      '/Rhyhorn/Metadata/Functions.R'
+      '/Montek/Metadata/Functions.R'
    )
 )
 
